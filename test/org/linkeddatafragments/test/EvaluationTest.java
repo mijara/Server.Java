@@ -40,8 +40,7 @@ public class EvaluationTest
     @Test
     public void testGetBindingFragment() throws IOException
     {
-        String bindingsString = "(?X ?Y) {(<http://data.semanticweb.org/person/gary-marchionini> <http://swrc.ontoware.org/ontology#affiliation>)" +
-                " (<http://data.semanticweb.org/conference/www/2010/paper/main/100> <http://purl.org/dc/elements/1.1/creator>) " +
+        String bindingsString = "(?X ?Y) { " +
                 " (<http://data.semanticweb.org/conference/www/2010/paper/main/100> UNDEF) }";
         List<Binding> bindingsList = TriplePatternFragmentServlet
                 .parseAsSetOfBindings(bindingsString);

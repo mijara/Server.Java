@@ -327,14 +327,16 @@ public class HdtDataSource extends DataSource
                     for (int i = 0; i < limit && result.hasNext(); i++)
                     {
                         TripleID tripleId = result.next();
-                        // System.out.println(dictionary.getNode(
-                        // tripleId.getSubject(),
-                        // TripleComponentRole.SUBJECT).toString() + " " +
-                        // dictionary
-                        // .getNode(tripleId.getPredicate(),
-                        // TripleComponentRole.PREDICATE).toString() + " " +
-                        // dictionary.getNode(tripleId.getObject(),
-                        // TripleComponentRole.OBJECT).toString());
+                        System.out.println(dictionary.getNode(
+                                tripleId.getSubject(),
+                                TripleComponentRole.SUBJECT).toString()
+                                + " "
+                                + dictionary.getNode(tripleId.getPredicate(),
+                                        TripleComponentRole.PREDICATE)
+                                        .toString()
+                                + " "
+                                + dictionary.getNode(tripleId.getObject(),
+                                        TripleComponentRole.OBJECT).toString());
                         TripleID tpId = new TripleID(-1, -1, -1);
                         for (Binding binding : bindings)
                         {
@@ -351,6 +353,11 @@ public class HdtDataSource extends DataSource
                                     {
                                         tpId.setSubject(tripleId.getSubject());
                                     }
+                                }
+                                else
+                                {
+                                    // UNDEF
+                                    tpId.setSubject(tripleId.getSubject());
                                 }
                             }
                             else
@@ -372,6 +379,11 @@ public class HdtDataSource extends DataSource
                                                 .getPredicate());
                                     }
                                 }
+                                else
+                                {
+                                    // UNDEF
+                                    tpId.setPredicate(tripleId.getPredicate());
+                                }
                             }
                             else
                             {
@@ -388,6 +400,11 @@ public class HdtDataSource extends DataSource
                                     {
                                         tpId.setObject(tripleId.getObject());
                                     }
+                                }
+                                else
+                                {
+                                    // UNDEF
+                                    tpId.setObject(tripleId.getObject());
                                 }
                             }
                             else
