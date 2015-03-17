@@ -40,8 +40,9 @@ public class EvaluationTest
     @Test
     public void testGetBindingFragment() throws IOException
     {
-        String bindingsString = "(?X ?Y) { " +
-                " (<http://data.semanticweb.org/conference/www/2010/paper/main/100> UNDEF) }";
+        String bindingsString = "(?X ?Y) {(<http://data.semanticweb.org/person/gary-marchionini> <http://swrc.ontoware.org/ontology#affiliation>)" +
+                " (<http://data.semanticweb.org/conference/www/2010/paper/main/100> <http://purl.org/dc/elements/1.1/creator>) " +
+                " (<http://data.semanticweb.org/organization/unc-chapel-hill> UNDEF) }";
         List<Binding> bindingsList = TriplePatternFragmentServlet
                 .parseAsSetOfBindings(bindingsString);
         HdtDataSource datasource = new HdtDataSource("test_datasource",
@@ -55,7 +56,7 @@ public class EvaluationTest
         final TripleElement _object = TriplePatternFragmentServlet
                 .parseAsNode("<http://data.semanticweb.org/person/chi-young-oh>");
 
-        TriplePatternFragment tpf = datasource.getBindingFragment(_subject, _predicate, _object, 0, 10,
+        TriplePatternFragment tpf = datasource.getBindingFragment(_subject, _predicate, _object, 2, 4,
                 bindingsList);
         Model m = tpf.getTriples();
         System.out.println(m.size());

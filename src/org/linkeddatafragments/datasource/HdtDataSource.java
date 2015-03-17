@@ -266,7 +266,7 @@ public class HdtDataSource extends DataSource
                                 {
                                     if (dictionary
                                             .getNode(
-                                                    tripleId.getSubject(),
+                                                    tripleId.getPredicate(),
                                                     TripleComponentRole.PREDICATE)
                                             .equals(binding
                                                     .get((Var) _predicate.object)))
@@ -280,7 +280,7 @@ public class HdtDataSource extends DataSource
                                 if (binding.contains((Var) _object.object))
                                 {
                                     if (dictionary.getNode(
-                                            tripleId.getSubject(),
+                                            tripleId.getObject(),
                                             TripleComponentRole.OBJECT).equals(
                                             binding.get((Var) _object.object)))
                                     {
