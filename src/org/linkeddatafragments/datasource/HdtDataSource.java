@@ -58,9 +58,21 @@ public class HdtDataSource extends DataSource
             TripleElement _predicate, TripleElement _object, final long offset,
             final long limit)
     {
-        Resource subject = (Resource) _subject.object;
-        Property predicate = (Property) _predicate.object;
-        RDFNode object = (RDFNode) _object.object;
+        Resource subject = null;
+        if (!_subject.name.equals("Var"))
+        {
+            subject = (Resource) _subject.object;
+        }
+        Property predicate = null;
+        if (!_predicate.name.equals("Var"))
+        {
+            predicate = (Property) _predicate.object;
+        }
+        RDFNode object = null;
+        if (!_object.name.equals("Var"))
+        {
+            object = (RDFNode) _object.object;
+        }
 
         if (offset < 0)
         {
