@@ -47,7 +47,7 @@ public class EvaluationTest
                 .parseAsSetOfBindings(bindingsString);
         HdtDataSource datasource = new HdtDataSource("test_datasource",
                 "test datasource",
-                "/Users/cbuil/Proyectos/tpf_evaluation/test_data/swdf-2012-11-28.hdt");
+                "data/swdf-2012-11-28.hdt");
 
         final TripleElement _subject = TriplePatternFragmentServlet
                 .parseAsResource("?X");

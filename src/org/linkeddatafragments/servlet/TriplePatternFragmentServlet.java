@@ -278,6 +278,10 @@ public class TriplePatternFragmentServlet extends HttpServlet
      */
     public static List<Binding> parseAsSetOfBindings(String value)
     {
+        if (value == null)
+        {
+            return null;
+        }
         String newString = "select * where {} VALUES " + value;
         Query q = QueryFactory.create(newString);
         // System.out.println(q.getValuesData());
@@ -293,6 +297,10 @@ public class TriplePatternFragmentServlet extends HttpServlet
      */
     public static Expr parseAsSetOfFilters(String value)
     {
+        if (value == null)
+        {
+            return null;
+        }
         Expr eor = null;
         Query q = QueryFactory.create("select * where { " + value + " }");
         ElementGroup qBody = (ElementGroup) q.getQueryPattern();
@@ -343,6 +351,10 @@ public class TriplePatternFragmentServlet extends HttpServlet
     public static TripleElement parseAsResource(String value)
     {
         final TripleElement subject = parseAsNode(value);
+        if (subject.object == null)
+        {
+            return new TripleElement("null", null);
+        }
         if (subject.name.equals("Var"))
         {
             return subject;
@@ -363,6 +375,10 @@ public class TriplePatternFragmentServlet extends HttpServlet
     {
         // final RDFNode predicateNode = parseAsNode(value);
         final TripleElement predicateNode = parseAsNode(value);
+        if (predicateNode.object == null)
+        {
+            return new TripleElement("null", null);
+        }
         if (predicateNode.name.equals("Var"))
         {
             return predicateNode;
@@ -398,7 +414,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
         // nothing or empty indicates an unknown
         if (value == null || value.length() == 0)
         {
-            return null;
+            return new TripleElement("null", null);
         }
         // find the kind of entity based on the first character
         final char firstChar = value.charAt(0);
@@ -406,7 +422,8 @@ public class TriplePatternFragmentServlet extends HttpServlet
         {
         // variable or blank node indicates an unknown
         case '?':
-            return new TripleElement("Var", Var.alloc(value.replaceAll("\\?", "")));
+            return new TripleElement("Var", Var.alloc(value.replaceAll("\\?",
+                    "")));
         case '_':
             return null;
             // angular brackets indicate a URI
