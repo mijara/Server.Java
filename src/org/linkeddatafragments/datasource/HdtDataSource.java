@@ -239,8 +239,11 @@ public class HdtDataSource extends DataSource
             @Override
             public Model getTriples()
             {
+                // System.out.println("second result size estimation: ");
+                // System.out.println(result.hasNext() ? Math.max(
+                // result.estimatedNumResults(), 1) : 0);
                 final Model triples = ModelFactory.createDefaultModel();
-                System.out.println(bindings);
+                // System.out.println(bindings);
 
                 // try to jump directly to the offset
                 boolean atOffset;
@@ -310,45 +313,14 @@ public class HdtDataSource extends DataSource
                 }
                 // now I'm at offset in result, I do not need to goto
                 atOffset = true;
-                // if (result.canGoTo())
-                // {
-                // try
-                // {
-                // result.goTo(offset);
-                // atOffset = true;
-                // } // if the offset is outside the bounds, this page has no
-                // // matches
-                // catch (IndexOutOfBoundsException exception)
-                // {
-                // atOffset = false;
-                // }
-                // } // if not possible, advance to the offset iteratively
-                // else
-                // {
-                // result.goToStart();
-                // for (int i = 0; !(atOffset = i == offset)
-                // && result.hasNext(); i++)
-                // {
-                // result.next();
-                // }
-                // }
-
                 // add `limit` triples to the result model
                 if (atOffset)
                 {
-                    for (int i = 0; i < limit && result.hasNext(); i++)
+                    int i = 0;
+                    j = 0;
+                    while (i < limit && result.hasNext())
                     {
                         TripleID tripleId = result.next();
-                        System.out.println(dictionary.getNode(
-                                tripleId.getSubject(),
-                                TripleComponentRole.SUBJECT).toString()
-                                + " "
-                                + dictionary.getNode(tripleId.getPredicate(),
-                                        TripleComponentRole.PREDICATE)
-                                        .toString()
-                                + " "
-                                + dictionary.getNode(tripleId.getObject(),
-                                        TripleComponentRole.OBJECT).toString());
                         TripleID tpId = new TripleID(-1, -1, -1);
                         for (Binding binding : bindings)
                         {
@@ -363,6 +335,9 @@ public class HdtDataSource extends DataSource
                                             .equals(binding
                                                     .get((Var) _subject.object)))
                                     {
+                                        System.out.println(dictionary.getNode(
+                                                tripleId.getSubject(),
+                                                TripleComponentRole.SUBJECT));
                                         tpId.setSubject(tripleId.getSubject());
                                     }
                                 }
@@ -427,10 +402,17 @@ public class HdtDataSource extends DataSource
                             {
                                 // System.out.println(tpId);
                                 triples.add(triples.asStatement(toTriple(tpId)));
+                                i++;
+                                System.out.println(dictionary.getNode(
+                                        tripleId.getSubject(),
+                                        TripleComponentRole.SUBJECT));
                                 break;
                             }
                         }
+                        j++;
                     }
+                    System.out.println("i: " + i);
+                    System.out.println("j: " + j);
                     // for (int i = 0; i < limit && result.hasNext(); i++)
                     // {
                     // triples.add(triples.asStatement(toTriple(result.next())));

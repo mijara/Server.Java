@@ -168,27 +168,28 @@ public class TriplePatternFragmentServlet extends HttpServlet
             final Expr filters = parseAsSetOfFilters(request
                     .getParameter("filters"));
 
+            TriplePatternFragment _fragment = null;
             if (filters != null)
             {
-                final TriplePatternFragment fragment = dataSource
-                        .getFilterFragment(subject, predicate, object, offset,
-                                limit, filters);
+                _fragment = dataSource.getFilterFragment(subject, predicate,
+                        object, offset, limit, filters);
             }
-
-            if (bindings != null)
+            else if (bindings != null)
             {
-                final TriplePatternFragment fragment = dataSource
-                        .getBindingFragment(subject, predicate, object, offset,
-                                limit, bindings);
+                _fragment = dataSource.getBindingFragment(subject, predicate,
+                        object, offset, limit, bindings);
             }
-
-            // **************
-
-            final TriplePatternFragment fragment = dataSource.getFragment(
-                    subject, predicate, object, offset, limit);
+            else
+            {
+                _fragment = dataSource.getFragment(subject, predicate, object,
+                        offset, limit);
+            }
+            
+            final TriplePatternFragment fragment = _fragment;
 
             // fill the output model
             final Model output = fragment.getTriples();
+            System.out.println("size: " + output.size());
             output.setNsPrefixes(config.getPrefixes());
 
             // add dataset metadata
