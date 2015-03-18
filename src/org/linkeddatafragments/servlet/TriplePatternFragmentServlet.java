@@ -189,7 +189,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
 
             // fill the output model
             final Model output = fragment.getTriples();
-            System.out.println("size: " + output.size());
+//            long newSize = output.size();
             output.setNsPrefixes(config.getPrefixes());
 
             // add dataset metadata
@@ -210,7 +210,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             output.add(fragmentId, RDF_TYPE, HYDRA_COLLECTION);
             output.add(fragmentId, RDF_TYPE, HYDRA_PAGEDCOLLECTION);
             final Literal total = output.createTypedLiteral(
-                    fragment.getTotalSize(), XSDDatatype.XSDinteger);
+                    output.size(), XSDDatatype.XSDinteger);
             output.add(fragmentId, VOID_TRIPLES, total);
             output.add(fragmentId, HYDRA_TOTALITEMS, total);
             output.add(fragmentId, HYDRA_ITEMSPERPAGE,
