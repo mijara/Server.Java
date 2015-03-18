@@ -164,7 +164,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             // Olaf and Carlos work
             // **************
             final List<Binding> bindings = parseAsSetOfBindings(request
-                    .getParameter("bindings"));
+                    .getParameter("values"));
             final Expr filters = parseAsSetOfFilters(request
                     .getParameter("filters"));
 

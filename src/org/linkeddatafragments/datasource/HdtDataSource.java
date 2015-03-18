@@ -202,7 +202,7 @@ public class HdtDataSource extends DataSource
         if (_predicate.name.equals("Var"))
         {
             predicateId = dictionary.getIntID(((Var) _predicate.object),
-                    TripleComponentRole.SUBJECT);
+                    TripleComponentRole.PREDICATE);
         }
         else
         {
@@ -213,7 +213,7 @@ public class HdtDataSource extends DataSource
         if (_object.name.equals("Var"))
         {
             objectId = dictionary.getIntID(((Var) _object.object),
-                    TripleComponentRole.SUBJECT);
+                    TripleComponentRole.OBJECT);
         }
         else
         {
