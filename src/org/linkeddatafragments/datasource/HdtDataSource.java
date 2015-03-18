@@ -236,6 +236,7 @@ public class HdtDataSource extends DataSource
         // create the fragment
         return new TriplePatternFragment()
         {
+            long totalSizeUpdated = totalSize;
             @Override
             public Model getTriples()
             {
@@ -411,7 +412,7 @@ public class HdtDataSource extends DataSource
                         }
                         j++;
                     }
-                    System.out.println("i: " + i);
+                    totalSizeUpdated = i;
                     System.out.println("j: " + j);
                     // for (int i = 0; i < limit && result.hasNext(); i++)
                     // {
@@ -424,7 +425,7 @@ public class HdtDataSource extends DataSource
             @Override
             public long getTotalSize()
             {
-                return totalSize;
+                return totalSizeUpdated;
             }
         };
     }
