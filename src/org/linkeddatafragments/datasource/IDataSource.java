@@ -32,7 +32,4 @@ public interface IDataSource {
         
         public TriplePatternFragment getBindingFragment(TripleElement subject, TripleElement predicate, TripleElement object,
                 long offset, long limit, List<Binding> bindings);
-        
-        public TriplePatternFragment getFilterFragment(TripleElement subject, TripleElement predicate, TripleElement object,
-                long offset, long limit, Expr expr);
 }
