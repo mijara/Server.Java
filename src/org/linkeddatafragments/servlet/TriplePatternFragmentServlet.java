@@ -165,16 +165,9 @@ public class TriplePatternFragmentServlet extends HttpServlet
             // **************
             final List<Binding> bindings = parseAsSetOfBindings(request
                     .getParameter("values"));
-            final Expr filters = parseAsSetOfFilters(request
-                    .getParameter("filters"));
 
             TriplePatternFragment _fragment = null;
-            if (filters != null)
-            {
-                _fragment = dataSource.getFilterFragment(subject, predicate,
-                        object, offset, limit, filters);
-            }
-            else if (bindings != null)
+            if (bindings != null)
             {
                 _fragment = dataSource.getBindingFragment(subject, predicate,
                         object, offset, limit, bindings);
