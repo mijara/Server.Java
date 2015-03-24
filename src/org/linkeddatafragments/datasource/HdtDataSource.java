@@ -96,7 +96,7 @@ public class HdtDataSource extends DataSource
         final IteratorTripleID matches = datasource.getTriples().search(
                 new TripleID(subjectId, predicateId, objectId));
         final boolean hasMatches = matches.hasNext();
-        long countAllResults = 0; 
+        long countAllResults = 0;
 
         if (hasMatches)
         {
@@ -127,9 +127,11 @@ public class HdtDataSource extends DataSource
             // try to add `limit` triples to the result model
             if (atOffset)
             {
-                for (int i = 0; i < limit && matches.hasNext(); i++){
+                for (int i = 0; i < limit && matches.hasNext(); i++)
+                {
                     triples.add(triples.asStatement(toTriple(matches.next())));
-                    countAllResults++;}
+                    countAllResults++;
+                }
             }
         }
 
@@ -138,7 +140,7 @@ public class HdtDataSource extends DataSource
         final long estimatedTotal = triples.size() > 0 ? Math.max(offset
                 + triples.size() + 1, matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
-        final long _countAllResults = countAllResults; 
+        final boolean streamFinished = (countAllResults + 1 >= estimatedTotal);
 
         // create the fragment
         return new TriplePatternFragment()
@@ -158,7 +160,7 @@ public class HdtDataSource extends DataSource
             @Override
             public boolean hasNextPage()
             {
-                return estimatedTotal > _countAllResults + limit;
+                return streamFinished;
             }
 
             @Override
@@ -414,7 +416,7 @@ public class HdtDataSource extends DataSource
         final long estimatedTotal = checkedResults > 0 ? Math.max(offset
                 + checkedResults + 1, matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
-        final long countAllResults = j;
+        final boolean streamFinished = (j + 1 >= estimatedTotal);
 
         // create the fragment
         return new TriplePatternFragment()
@@ -434,7 +436,7 @@ public class HdtDataSource extends DataSource
             @Override
             public boolean hasNextPage()
             {
-                return estimatedTotal > countAllResults + limit;
+                return streamFinished;
             }
 
             @Override
