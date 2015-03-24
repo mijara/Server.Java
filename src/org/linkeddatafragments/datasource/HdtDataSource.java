@@ -336,9 +336,9 @@ public class HdtDataSource extends DataSource
                                         TripleComponentRole.SUBJECT).equals(
                                         binding.get((Var) _subject.object)))
                                 {
-                                    System.out.println(dictionary.getNode(
-                                            tripleId.getSubject(),
-                                            TripleComponentRole.SUBJECT));
+//                                    System.out.println(dictionary.getNode(
+//                                            tripleId.getSubject(),
+//                                            TripleComponentRole.SUBJECT));
                                     tpId.setSubject(tripleId.getSubject());
                                 }
                             }
@@ -400,9 +400,9 @@ public class HdtDataSource extends DataSource
                             triples.add(triples.asStatement(toTriple(tpId)));
                             validResults++;
                             checkedResults++;
-                            System.out.println(dictionary.getNode(
-                                    tripleId.getSubject(),
-                                    TripleComponentRole.SUBJECT));
+//                            System.out.println(dictionary.getNode(
+//                                    tripleId.getSubject(),
+//                                    TripleComponentRole.SUBJECT));
                             break;
                         }
                     }
