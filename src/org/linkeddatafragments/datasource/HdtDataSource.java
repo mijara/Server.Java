@@ -208,8 +208,9 @@ public class HdtDataSource extends DataSource
         int objectId = 0;
         if (_subject.name.equals("Var"))
         {
-            subjectId = dictionary.getIntID(((Var) _subject.object),
-                    TripleComponentRole.SUBJECT);
+            subjectId = 0;
+//            subjectId = dictionary.getIntID(((Var) _subject.object),
+//                    TripleComponentRole.SUBJECT);
         }
         else
         {
@@ -219,8 +220,9 @@ public class HdtDataSource extends DataSource
         }
         if (_predicate.name.equals("Var"))
         {
-            predicateId = dictionary.getIntID(((Var) _predicate.object),
-                    TripleComponentRole.PREDICATE);
+//            predicateId = dictionary.getIntID(((Var) _predicate.object),
+//                    TripleComponentRole.PREDICATE);
+            predicateId = 0;
         }
         else
         {
@@ -230,8 +232,9 @@ public class HdtDataSource extends DataSource
         }
         if (_object.name.equals("Var"))
         {
-            objectId = dictionary.getIntID(((Var) _object.object),
-                    TripleComponentRole.OBJECT);
+//            objectId = dictionary.getIntID(((Var) _object.object),
+//                    TripleComponentRole.OBJECT);
+            objectId = 0;
         }
         else
         {
