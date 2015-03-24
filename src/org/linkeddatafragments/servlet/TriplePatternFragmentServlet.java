@@ -169,6 +169,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             TriplePatternFragment _fragment = null;
             if (bindings != null)
             {
+                System.out.println("bindings size: " + bindings.size());
                 _fragment = dataSource.getBindingFragment(subject, predicate,
                         object, offset, limit, bindings);
             }
@@ -288,7 +289,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             return null;
         }
         String newString = "select * where {} VALUES " + value;
-//        System.out.println(value);
+        // System.out.println(value);
         Query q = QueryFactory.create(newString);
         // System.out.println(q.getValuesData());
         return q.getValuesData();
