@@ -96,6 +96,7 @@ public class HdtDataSource extends DataSource
         final IteratorTripleID matches = datasource.getTriples().search(
                 new TripleID(subjectId, predicateId, objectId));
         final boolean hasMatches = matches.hasNext();
+        long countAllResults = 0; 
 
         if (hasMatches)
         {
@@ -107,6 +108,7 @@ public class HdtDataSource extends DataSource
                 {
                     matches.goTo(offset);
                     atOffset = true;
+                    countAllResults = offset;
                 }
                 // if the offset is outside the bounds, this page has no matches
                 catch (IndexOutOfBoundsException exception)
@@ -120,12 +122,14 @@ public class HdtDataSource extends DataSource
                 matches.goToStart();
                 for (int i = 0; !(atOffset = i == offset) && matches.hasNext(); i++)
                     matches.next();
+                countAllResults++;
             }
             // try to add `limit` triples to the result model
             if (atOffset)
             {
-                for (int i = 0; i < limit && matches.hasNext(); i++)
+                for (int i = 0; i < limit && matches.hasNext(); i++){
                     triples.add(triples.asStatement(toTriple(matches.next())));
+                    countAllResults++;}
             }
         }
 
@@ -134,6 +138,7 @@ public class HdtDataSource extends DataSource
         final long estimatedTotal = triples.size() > 0 ? Math.max(offset
                 + triples.size() + 1, matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
+        final long _countAllResults = countAllResults; 
 
         // create the fragment
         return new TriplePatternFragment()
@@ -146,6 +151,18 @@ public class HdtDataSource extends DataSource
 
             @Override
             public long getTotalSize()
+            {
+                return estimatedTotal;
+            }
+
+            @Override
+            public boolean hasNextPage()
+            {
+                return estimatedTotal > _countAllResults + limit;
+            }
+
+            @Override
+            public long getEstimatedSize()
             {
                 return estimatedTotal;
             }
@@ -228,17 +245,17 @@ public class HdtDataSource extends DataSource
         final IteratorTripleID matches = datasource.getTriples().search(
                 new TripleID(subjectId, predicateId, objectId));
         final boolean hasMatches = matches.hasNext();
-        
+
         int validResults = 0;
+        int checkedResults = 0;
+        int j = 0;
         if (hasMatches)
         {
             // try to jump directly to the offset
             boolean atOffset;
-
-            int j = 0;
             while (matches.hasNext())
             {
-                if (j >= offset)
+                if (checkedResults >= offset)
                 {
                     break;
                 }
@@ -287,11 +304,12 @@ public class HdtDataSource extends DataSource
                         }
                         if (increase)
                         {
-                            j++;
+                            checkedResults++;
                         }
                     }
 
                 }
+                j++;
             }
             // now I'm at offset in result, I do not need to goto
             atOffset = true;
@@ -300,7 +318,7 @@ public class HdtDataSource extends DataSource
             {
                 // long totalSizeUpdated = totalSize;
                 validResults = 0;
-                j = 0;
+                // checkedResults = 0;
                 while (validResults < limit && matches.hasNext())
                 {
                     TripleID tripleId = matches.next();
@@ -379,6 +397,7 @@ public class HdtDataSource extends DataSource
                             // System.out.println(tpId);
                             triples.add(triples.asStatement(toTriple(tpId)));
                             validResults++;
+                            checkedResults++;
                             System.out.println(dictionary.getNode(
                                     tripleId.getSubject(),
                                     TripleComponentRole.SUBJECT));
@@ -388,13 +407,14 @@ public class HdtDataSource extends DataSource
                     j++;
                 }
                 // totalSizeUpdated = i;
-                System.out.println("j: " + j);
+                System.out.println("checkedResults: " + checkedResults);
             }
         }
 
-        final long estimatedTotal = validResults > 0 ? Math.max(offset
-                + validResults + 1, matches.estimatedNumResults())
+        final long estimatedTotal = checkedResults > 0 ? Math.max(offset
+                + checkedResults + 1, matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
+        final long countAllResults = j;
 
         // create the fragment
         return new TriplePatternFragment()
@@ -407,6 +427,18 @@ public class HdtDataSource extends DataSource
 
             @Override
             public long getTotalSize()
+            {
+                return -1;
+            }
+
+            @Override
+            public boolean hasNextPage()
+            {
+                return estimatedTotal > countAllResults + limit;
+            }
+
+            @Override
+            public long getEstimatedSize()
             {
                 return estimatedTotal;
             }

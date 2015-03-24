@@ -177,7 +177,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
                 _fragment = dataSource.getFragment(subject, predicate, object,
                         offset, limit);
             }
-            
+
             final TriplePatternFragment fragment = _fragment;
 
             // fill the output model
@@ -202,7 +202,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             output.add(fragmentId, RDF_TYPE, HYDRA_COLLECTION);
             output.add(fragmentId, RDF_TYPE, HYDRA_PAGEDCOLLECTION);
             final Literal total = output.createTypedLiteral(
-                    fragment.getTotalSize(), XSDDatatype.XSDinteger);
+                    fragment.getEstimatedSize(), XSDDatatype.XSDinteger);
             output.add(fragmentId, VOID_TRIPLES, total);
             output.add(fragmentId, HYDRA_TOTALITEMS, total);
             output.add(fragmentId, HYDRA_ITEMSPERPAGE,
@@ -219,11 +219,23 @@ public class TriplePatternFragmentServlet extends HttpServlet
                 output.add(fragmentId, HYDRA_PREVIOUSPAGE,
                         output.createResource(pagedUrl.toString()));
             }
-            if (offset + limit < fragment.getTotalSize())
+            if (fragment.getTotalSize() > 0)
             {
-                pagedUrl.setParameter("page", Long.toString(page + 1));
-                output.add(fragmentId, HYDRA_NEXTPAGE,
-                        output.createResource(pagedUrl.toString()));
+                if (offset + limit < fragment.getTotalSize())
+                {
+                    pagedUrl.setParameter("page", Long.toString(page + 1));
+                    output.add(fragmentId, HYDRA_NEXTPAGE,
+                            output.createResource(pagedUrl.toString()));
+                }
+            }
+            else
+            {
+                if (fragment.hasNextPage())
+                {
+                    pagedUrl.setParameter("page", Long.toString(page + 1));
+                    output.add(fragmentId, HYDRA_NEXTPAGE,
+                            output.createResource(pagedUrl.toString()));
+                }
             }
 
             // add controls
@@ -276,6 +288,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             return null;
         }
         String newString = "select * where {} VALUES " + value;
+        System.out.println(value);
         Query q = QueryFactory.create(newString);
         // System.out.println(q.getValuesData());
         return q.getValuesData();
