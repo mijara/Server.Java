@@ -160,7 +160,7 @@ public class HdtDataSource extends DataSource
             @Override
             public boolean hasNextPage()
             {
-                return streamFinished;
+                return !streamFinished;
             }
 
             @Override
@@ -436,7 +436,7 @@ public class HdtDataSource extends DataSource
             @Override
             public boolean hasNextPage()
             {
-                return streamFinished;
+                return !streamFinished;
             }
 
             @Override
