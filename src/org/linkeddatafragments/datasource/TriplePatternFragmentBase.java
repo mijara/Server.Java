@@ -43,4 +43,10 @@ public class TriplePatternFragmentBase implements TriplePatternFragment {
     {
         return false;
     }
+
+    @Override
+    public long getEstimatedSize()
+    {
+        return 0;
+    }
 }
