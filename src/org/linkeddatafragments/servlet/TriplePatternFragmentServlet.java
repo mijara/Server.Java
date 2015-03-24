@@ -288,7 +288,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             return null;
         }
         String newString = "select * where {} VALUES " + value;
-        System.out.println(value);
+//        System.out.println(value);
         Query q = QueryFactory.create(newString);
         // System.out.println(q.getValuesData());
         return q.getValuesData();

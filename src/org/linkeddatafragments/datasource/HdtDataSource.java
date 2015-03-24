@@ -408,8 +408,9 @@ public class HdtDataSource extends DataSource
                     }
                     j++;
                 }
-                // totalSizeUpdated = i;
-                System.out.println("checkedResults: " + checkedResults);
+                System.out.println("Results readed so far: " + j);
+                System.out.println("Results this page: " + validResults);
+                System.out.println("Checked Results: " + checkedResults);
             }
         }
 
@@ -417,6 +418,7 @@ public class HdtDataSource extends DataSource
                 + checkedResults + 1, matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
         final boolean streamFinished = (j + 1 >= estimatedTotal);
+        System.out.println("Estimated total: " + estimatedTotal);
 
         // create the fragment
         return new TriplePatternFragment()
