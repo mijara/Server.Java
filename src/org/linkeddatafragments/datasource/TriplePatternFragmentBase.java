@@ -37,16 +37,4 @@ public class TriplePatternFragmentBase implements TriplePatternFragment {
 	public long getTotalSize() {
 		return totalSize;
 	}
-
-    @Override
-    public boolean hasNextPage()
-    {
-        return false;
-    }
-
-    @Override
-    public long getEstimatedSize()
-    {
-        return 0;
-    }
 }

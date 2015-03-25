@@ -203,7 +203,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             output.add(fragmentId, RDF_TYPE, HYDRA_COLLECTION);
             output.add(fragmentId, RDF_TYPE, HYDRA_PAGEDCOLLECTION);
             final Literal total = output.createTypedLiteral(
-                    fragment.getEstimatedSize(), XSDDatatype.XSDinteger);
+                    fragment.getTotalSize(), XSDDatatype.XSDinteger);
             output.add(fragmentId, VOID_TRIPLES, total);
             output.add(fragmentId, HYDRA_TOTALITEMS, total);
             output.add(fragmentId, HYDRA_ITEMSPERPAGE,
@@ -220,24 +220,21 @@ public class TriplePatternFragmentServlet extends HttpServlet
                 output.add(fragmentId, HYDRA_PREVIOUSPAGE,
                         output.createResource(pagedUrl.toString()));
             }
-            if (fragment.getTotalSize() > 0)
+            if (offset + limit < fragment.getTotalSize())
             {
-                if (offset + limit < fragment.getTotalSize())
-                {
-                    pagedUrl.setParameter("page", Long.toString(page + 1));
-                    output.add(fragmentId, HYDRA_NEXTPAGE,
-                            output.createResource(pagedUrl.toString()));
-                }
+                pagedUrl.setParameter("page", Long.toString(page + 1));
+                output.add(fragmentId, HYDRA_NEXTPAGE,
+                        output.createResource(pagedUrl.toString()));
             }
-            else
-            {
-                if (fragment.hasNextPage())
-                {
-                    pagedUrl.setParameter("page", Long.toString(page + 1));
-                    output.add(fragmentId, HYDRA_NEXTPAGE,
-                            output.createResource(pagedUrl.toString()));
-                }
-            }
+            // else
+            // {
+            // if (fragment.hasNextPage())
+            // {
+            // pagedUrl.setParameter("page", Long.toString(page + 1));
+            // output.add(fragmentId, HYDRA_NEXTPAGE,
+            // output.createResource(pagedUrl.toString()));
+            // }
+            // }
 
             // add controls
             final Resource triplePattern = output.createResource();

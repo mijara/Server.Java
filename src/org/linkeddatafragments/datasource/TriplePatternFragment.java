@@ -18,8 +18,4 @@ public interface TriplePatternFragment {
 	 * @return the total number of triples
 	 */
 	public long getTotalSize();
-	
-	public boolean hasNextPage();
-	
-	public long getEstimatedSize();
 }

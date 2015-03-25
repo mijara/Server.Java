@@ -11,6 +11,7 @@ import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TripleID;
 import org.rdfhdt.hdtjena.NodeDictionary;
 
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -96,7 +97,6 @@ public class HdtDataSource extends DataSource
         final IteratorTripleID matches = datasource.getTriples().search(
                 new TripleID(subjectId, predicateId, objectId));
         final boolean hasMatches = matches.hasNext();
-        long countAllResults = 0;
 
         if (hasMatches)
         {
@@ -108,7 +108,6 @@ public class HdtDataSource extends DataSource
                 {
                     matches.goTo(offset);
                     atOffset = true;
-                    countAllResults = offset;
                 }
                 // if the offset is outside the bounds, this page has no matches
                 catch (IndexOutOfBoundsException exception)
@@ -122,16 +121,12 @@ public class HdtDataSource extends DataSource
                 matches.goToStart();
                 for (int i = 0; !(atOffset = i == offset) && matches.hasNext(); i++)
                     matches.next();
-                countAllResults++;
             }
             // try to add `limit` triples to the result model
             if (atOffset)
             {
                 for (int i = 0; i < limit && matches.hasNext(); i++)
-                {
                     triples.add(triples.asStatement(toTriple(matches.next())));
-                    countAllResults++;
-                }
             }
         }
 
@@ -140,7 +135,6 @@ public class HdtDataSource extends DataSource
         final long estimatedTotal = triples.size() > 0 ? Math.max(offset
                 + triples.size() + 1, matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
-        final boolean streamFinished = (countAllResults + 1 >= estimatedTotal);
 
         // create the fragment
         return new TriplePatternFragment()
@@ -153,18 +147,6 @@ public class HdtDataSource extends DataSource
 
             @Override
             public long getTotalSize()
-            {
-                return estimatedTotal;
-            }
-
-            @Override
-            public boolean hasNextPage()
-            {
-                return !streamFinished;
-            }
-
-            @Override
-            public long getEstimatedSize()
             {
                 return estimatedTotal;
             }
@@ -209,8 +191,8 @@ public class HdtDataSource extends DataSource
         if (_subject.name.equals("Var"))
         {
             subjectId = 0;
-//            subjectId = dictionary.getIntID(((Var) _subject.object),
-//                    TripleComponentRole.SUBJECT);
+            // subjectId = dictionary.getIntID(((Var) _subject.object),
+            // TripleComponentRole.SUBJECT);
         }
         else
         {
@@ -220,8 +202,8 @@ public class HdtDataSource extends DataSource
         }
         if (_predicate.name.equals("Var"))
         {
-//            predicateId = dictionary.getIntID(((Var) _predicate.object),
-//                    TripleComponentRole.PREDICATE);
+            // predicateId = dictionary.getIntID(((Var) _predicate.object),
+            // TripleComponentRole.PREDICATE);
             predicateId = 0;
         }
         else
@@ -232,8 +214,8 @@ public class HdtDataSource extends DataSource
         }
         if (_object.name.equals("Var"))
         {
-//            objectId = dictionary.getIntID(((Var) _object.object),
-//                    TripleComponentRole.OBJECT);
+            // objectId = dictionary.getIntID(((Var) _object.object),
+            // TripleComponentRole.OBJECT);
             objectId = 0;
         }
         else
@@ -256,171 +238,79 @@ public class HdtDataSource extends DataSource
         int j = 0;
         if (hasMatches)
         {
-            // try to jump directly to the offset
-            boolean atOffset;
+            matches.goToStart();
+            // iterate over the matching triples until we are at the correct
+            // offset
+            // (ignoring matching triples that are not compatible with any of
+            // the
+            // solution mappings in 'bindings')
             while (matches.hasNext())
             {
                 if (checkedResults >= offset)
                 {
                     break;
                 }
-                else
-                {
-                    TripleID tripleId = matches.next();
-                    for (Binding binding : bindings)
-                    {
-                        boolean increase = false;
-                        // Bindings: (?X ?Y) {(val1 val2)}
-                        if (_subject.name.equals("Var"))
-                        {
-                            if (binding.contains((Var) _subject.object))
-                            {
-                                if (dictionary.getNode(tripleId.getSubject(),
-                                        TripleComponentRole.SUBJECT).equals(
-                                        binding.get((Var) _subject.object)))
-                                {
-                                    increase = true;
-                                }
-                            }
-                        }
-                        if (_predicate.name.equals("Var"))
-                        {
-                            if (binding.contains((Var) _predicate.object))
-                            {
-                                if (dictionary.getNode(tripleId.getPredicate(),
-                                        TripleComponentRole.PREDICATE).equals(
-                                        binding.get((Var) _predicate.object)))
-                                {
-                                    increase = true;
-                                }
-                            }
-                        }
-                        if (_object.name.equals("Var"))
-                        {
-                            if (binding.contains((Var) _object.object))
-                            {
-                                if (dictionary.getNode(tripleId.getObject(),
-                                        TripleComponentRole.OBJECT).equals(
-                                        binding.get((Var) _object.object)))
-                                {
-                                    increase = true;
-                                }
-                            }
-                        }
-                        if (increase)
-                        {
-                            checkedResults++;
-                        }
-                    }
 
+                TripleID tripleId = matches.next();
+                boolean isCompatible = false;
+                for (Binding binding : bindings)
+                {
+                    if (checkCompatibility(tripleId, binding, _subject,
+                            _predicate, _object, dictionary))
+                    {
+                        isCompatible = true;
+                        break;
+                    }
+                }
+                if (isCompatible)
+                {
+                    checkedResults++;
+                }
+
+                j++;
+            }
+
+            // now we are at the correct offset; add `limit` triples to the
+            // result model
+            // (againg, ignoring matching triples that are not compatible with
+            // any of the
+            // solution mappings in 'bindings')
+
+            // long totalSizeUpdated = totalSize;
+            validResults = 0;
+            while (validResults < limit && matches.hasNext())
+            {
+                TripleID tripleId = matches.next();
+                for (Binding binding : bindings)
+                {
+                    if (checkCompatibility(tripleId, binding, _subject,
+                            _predicate, _object, dictionary))
+                    {
+                        // System.out.println(tripleId);
+                        triples.add(triples.asStatement(toTriple(tripleId)));
+                        validResults++;
+                        checkedResults++;
+                        break;
+                    }
                 }
                 j++;
             }
-            // now I'm at offset in result, I do not need to goto
-            atOffset = true;
-            // add `limit` triples to the result model
-            if (atOffset)
-            {
-                // long totalSizeUpdated = totalSize;
-                validResults = 0;
-                // checkedResults = 0;
-                while (validResults < limit && matches.hasNext())
-                {
-                    TripleID tripleId = matches.next();
-                    TripleID tpId = new TripleID(-1, -1, -1);
-                    for (Binding binding : bindings)
-                    {
-                        // Bindings: (?X ?Y) {(val1 val2)}
-                        if (_subject.name.equals("Var"))
-                        {
-                            if (binding.contains((Var) _subject.object))
-                            {
-                                if (dictionary.getNode(tripleId.getSubject(),
-                                        TripleComponentRole.SUBJECT).equals(
-                                        binding.get((Var) _subject.object)))
-                                {
-//                                    System.out.println(dictionary.getNode(
-//                                            tripleId.getSubject(),
-//                                            TripleComponentRole.SUBJECT));
-                                    tpId.setSubject(tripleId.getSubject());
-                                }
-                            }
-                            else
-                            {
-                                // UNDEF
-                                tpId.setSubject(tripleId.getSubject());
-                            }
-                        }
-                        else
-                        {
-                            tpId.setSubject(tripleId.getSubject());
-                        }
-                        if (_predicate.name.equals("Var"))
-                        {
-                            if (binding.contains((Var) _predicate.object))
-                            {
-                                if (dictionary.getNode(tripleId.getPredicate(),
-                                        TripleComponentRole.PREDICATE).equals(
-                                        binding.get((Var) _predicate.object)))
-                                {
-                                    tpId.setPredicate(tripleId.getPredicate());
-                                }
-                            }
-                            else
-                            {
-                                // UNDEF
-                                tpId.setPredicate(tripleId.getPredicate());
-                            }
-                        }
-                        else
-                        {
-                            tpId.setPredicate(tripleId.getPredicate());
-                        }
-                        if (_object.name.equals("Var"))
-                        {
-                            if (binding.contains((Var) _object.object))
-                            {
-                                if (dictionary.getNode(tripleId.getObject(),
-                                        TripleComponentRole.OBJECT).equals(
-                                        binding.get((Var) _object.object)))
-                                {
-                                    tpId.setObject(tripleId.getObject());
-                                }
-                            }
-                            else
-                            {
-                                // UNDEF
-                                tpId.setObject(tripleId.getObject());
-                            }
-                        }
-                        else
-                        {
-                            tpId.setObject(tripleId.getObject());
-                        }
-                        if (tpId.isValid())
-                        {
-                            // System.out.println(tpId);
-                            triples.add(triples.asStatement(toTriple(tpId)));
-                            validResults++;
-                            checkedResults++;
-//                            System.out.println(dictionary.getNode(
-//                                    tripleId.getSubject(),
-//                                    TripleComponentRole.SUBJECT));
-                            break;
-                        }
-                    }
-                    j++;
-                }
-                System.out.println("Results readed so far: " + j);
-                System.out.println("Results this page: " + validResults);
-                System.out.println("Checked Results: " + checkedResults);
-            }
+            System.out.println("Results read so far: " + j);
+            System.out.println("Results this page: " + validResults);
+            System.out.println("Checked Results: " + checkedResults);
         }
 
-        final long estimatedTotal = checkedResults > 0 ? Math.max(offset
-                + checkedResults + 1, matches.estimatedNumResults())
-                : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
-        final boolean streamFinished = (j + 1 >= estimatedTotal);
+        // final long estimatedTotal = checkedResults > 0 ? Math.max(
+        // checkedResults + 1, matches.estimatedNumResults()) : 0;
+        // final boolean notStreamFinished = (j + 1 < estimatedTotal);
+
+        // if the counted results so far j are less than the estimated result
+        // number, then the client should ask for the next page (offset + limit
+        // + 1). If j is
+        // greater, the client should not ask for the next page (offset + limit)
+        final long estimatedTotal = j + 1 < matches.estimatedNumResults() ? offset
+                + limit + 1
+                : offset + limit;
         System.out.println("Estimated total: " + estimatedTotal);
 
         // create the fragment
@@ -434,18 +324,6 @@ public class HdtDataSource extends DataSource
 
             @Override
             public long getTotalSize()
-            {
-                return -1;
-            }
-
-            @Override
-            public boolean hasNextPage()
-            {
-                return !streamFinished;
-            }
-
-            @Override
-            public long getEstimatedSize()
             {
                 return estimatedTotal;
             }
@@ -647,5 +525,54 @@ public class HdtDataSource extends DataSource
         // return totalSizeUpdated;
         // }
         // };
+    }
+
+    /**
+     * Assuming that tripleId is a matching triple for the triple pattern
+     * (_subject,_predicate,_object), this method returns true if the solution
+     * mapping that can be generated from this matching triple is compatible
+     * with the given solution mapping (solMap).
+     */
+    static public boolean checkCompatibility(final TripleID tripleId,
+            final Binding solMap, final TripleElement _subject,
+            final TripleElement _predicate, final TripleElement _object,
+            final NodeDictionary dictionary)
+    {
+        if (_subject.name.equals("Var")
+                && solMap.contains((Var) _subject.object))
+        {
+            Node a = dictionary.getNode(tripleId.getSubject(),
+                    TripleComponentRole.SUBJECT);
+            Node b = solMap.get((Var) _subject.object);
+            if (!a.equals(b))
+            {
+                return false;
+            }
+        }
+
+        if (_predicate.name.equals("Var")
+                && solMap.contains((Var) _predicate.object))
+        {
+            Node a = dictionary.getNode(tripleId.getPredicate(),
+                    TripleComponentRole.PREDICATE);
+            Node b = solMap.get((Var) _predicate.object);
+            if (!a.equals(b))
+            {
+                return false;
+            }
+        }
+
+        if (_object.name.equals("Var") && solMap.contains((Var) _object.object))
+        {
+            Node a = dictionary.getNode(tripleId.getObject(),
+                    TripleComponentRole.OBJECT);
+            Node b = solMap.get((Var) _object.object);
+            if (!a.equals(b))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
