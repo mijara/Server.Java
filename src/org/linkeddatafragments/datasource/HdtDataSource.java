@@ -285,17 +285,30 @@ public class HdtDataSource extends DataSource
             System.out.println("Checked Results: " + checkedResults);
         }
 
-        // final long estimatedTotal = checkedResults > 0 ? Math.max(
-        // checkedResults + 1, matches.estimatedNumResults()) : 0;
-        // final boolean notStreamFinished = (j + 1 < estimatedTotal);
+        // at this point it holds that: offset <= checkedResults <= offset + limit
 
-        // if the counted results so far j are less than the estimated result
-        // number, then the client should ask for the next page (offset + limit
-        // + 1). If j is
-        // greater, the client should not ask for the next page (offset + limit)
-        final long estimatedTotal = j + 1 < matches.estimatedNumResults() ? offset
-                + limit + 1
-                : offset + limit;
+        long _estimatedTotal;
+        if ( checkedResults > 0 )
+        {
+            if ( validResults < limit )
+            {
+                _estimatedTotal = checkedResults;
+            }
+            else if ( ! matches.hasNext() )
+            {
+                _estimatedTotal = checkedResults;
+            }
+            else
+            {
+                // in this case we have: checkedResults = offset + limit
+                _estimatedTotal = Math.max( checkedResults + 1, matches.estimatedNumResults() );
+            }
+        }
+        else
+        {
+            _estimatedTotal = 0;
+        }
+        final long estimatedTotal = _estimatedTotal;
         System.out.println("Estimated total: " + estimatedTotal);
 
         // create the fragment
