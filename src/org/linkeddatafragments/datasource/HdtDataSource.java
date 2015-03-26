@@ -252,17 +252,7 @@ public class HdtDataSource extends DataSource
                 }
 
                 TripleID tripleId = matches.next();
-                boolean isCompatible = false;
-                for (Binding binding : bindings)
-                {
-                    if (checkCompatibility(tripleId, binding, _subject,
-                            _predicate, _object, dictionary))
-                    {
-                        isCompatible = true;
-                        break;
-                    }
-                }
-                if (isCompatible)
+                if ( isValid(tripleId, bindings, _subject, _predicate, _object, dictionary) )
                 {
                     checkedResults++;
                 }
@@ -281,17 +271,12 @@ public class HdtDataSource extends DataSource
             while (validResults < limit && matches.hasNext())
             {
                 TripleID tripleId = matches.next();
-                for (Binding binding : bindings)
+                if ( isValid(tripleId, bindings, _subject, _predicate, _object, dictionary) )
                 {
-                    if (checkCompatibility(tripleId, binding, _subject,
-                            _predicate, _object, dictionary))
-                    {
-                        // System.out.println(tripleId);
-                        triples.add(triples.asStatement(toTriple(tripleId)));
-                        validResults++;
-                        checkedResults++;
-                        break;
-                    }
+                    // System.out.println(tripleId);
+                    triples.add(triples.asStatement(toTriple(tripleId)));
+                    validResults++;
+                    checkedResults++;
                 }
                 j++;
             }
@@ -525,6 +510,27 @@ public class HdtDataSource extends DataSource
         // return totalSizeUpdated;
         // }
         // };
+    }
+
+    /**
+     * Assuming that tripleId is a matching triple for the triple pattern
+     * (_subject,_predicate,_object), this method returns true if the solution
+     * mapping that can be generated from this matching triple is compatible
+     * with at least on of the solution mappings in solMapSet.
+     */
+    static public boolean isValid(final TripleID tripleId,
+            final List<Binding> solMapSet, final TripleElement _subject,
+            final TripleElement _predicate, final TripleElement _object,
+            final NodeDictionary dictionary)
+    {
+        for (Binding solMap : solMapSet)
+        {
+            if ( checkCompatibility(tripleId, solMap, _subject, _predicate, _object, dictionary) )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
