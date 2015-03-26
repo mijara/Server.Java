@@ -169,7 +169,6 @@ public class TriplePatternFragmentServlet extends HttpServlet
             TriplePatternFragment _fragment = null;
             if (bindings != null)
             {
-                System.out.println("bindings size: " + bindings.size());
                 _fragment = dataSource.getBindingFragment(subject, predicate,
                         object, offset, limit, bindings);
             }
@@ -226,15 +225,6 @@ public class TriplePatternFragmentServlet extends HttpServlet
                 output.add(fragmentId, HYDRA_NEXTPAGE,
                         output.createResource(pagedUrl.toString()));
             }
-            // else
-            // {
-            // if (fragment.hasNextPage())
-            // {
-            // pagedUrl.setParameter("page", Long.toString(page + 1));
-            // output.add(fragmentId, HYDRA_NEXTPAGE,
-            // output.createResource(pagedUrl.toString()));
-            // }
-            // }
 
             // add controls
             final Resource triplePattern = output.createResource();
@@ -286,9 +276,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             return null;
         }
         String newString = "select * where {} VALUES " + value;
-        // System.out.println(value);
         Query q = QueryFactory.create(newString);
-        // System.out.println(q.getValuesData());
         return q.getValuesData();
     }
 
