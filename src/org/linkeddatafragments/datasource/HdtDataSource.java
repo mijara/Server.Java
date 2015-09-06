@@ -332,9 +332,13 @@ public class HdtDataSource extends DataSource
             final TripleElement _predicate, final TripleElement _object,
             final NodeDictionary dictionary)
     {
+        Var subjectVar   = ( _subject.name.equals("Var") )   ? (Var) _subject.object : null;
+        Var predicateVar = ( _predicate.name.equals("Var") ) ? (Var) _predicate.object : null;
+        Var objectVar    = ( _object.name.equals("Var") )    ? (Var) _object.object : null;
+        
         for (Binding solMap : solMapSet)
         {
-            if ( checkCompatibility(tripleId, solMap, _subject, _predicate, _object, dictionary) )
+            if ( checkCompatibility(tripleId, solMap, subjectVar, predicateVar, objectVar, dictionary) )
             {
                 return true;
             }
@@ -349,39 +353,37 @@ public class HdtDataSource extends DataSource
      * with the given solution mapping (solMap).
      */
     static public boolean checkCompatibility(final TripleID tripleId,
-            final Binding solMap, final TripleElement _subject,
-            final TripleElement _predicate, final TripleElement _object,
+            final Binding solMap, final Var subjectVar,
+            final Var predicateVar, final Var objectVar,
             final NodeDictionary dictionary)
     {
-        if (_subject.name.equals("Var")
-                && solMap.contains((Var) _subject.object))
+        if (subjectVar != null && solMap.contains(subjectVar))
         {
             Node a = dictionary.getNode(tripleId.getSubject(),
                     TripleComponentRole.SUBJECT);
-            Node b = solMap.get((Var) _subject.object);
+            Node b = solMap.get(subjectVar);
             if (!a.equals(b))
             {
                 return false;
             }
         }
 
-        if (_predicate.name.equals("Var")
-                && solMap.contains((Var) _predicate.object))
+        if (predicateVar != null && solMap.contains(predicateVar))
         {
             Node a = dictionary.getNode(tripleId.getPredicate(),
                     TripleComponentRole.PREDICATE);
-            Node b = solMap.get((Var) _predicate.object);
+            Node b = solMap.get(predicateVar);
             if (!a.equals(b))
             {
                 return false;
             }
         }
 
-        if (_object.name.equals("Var") && solMap.contains((Var) _object.object))
+        if (objectVar != null && solMap.contains(objectVar))
         {
             Node a = dictionary.getNode(tripleId.getObject(),
                     TripleComponentRole.OBJECT);
-            Node b = solMap.get((Var) _object.object);
+            Node b = solMap.get(objectVar);
             if (!a.equals(b))
             {
                 return false;
