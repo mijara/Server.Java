@@ -1,7 +1,11 @@
 package org.linkeddatafragments.datasource;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.linkeddatafragments.util.TripleElement;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
@@ -11,7 +15,6 @@ import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TripleID;
 import org.rdfhdt.hdtjena.NodeDictionary;
 
-import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -175,6 +178,61 @@ public class HdtDataSource extends DataSource
             final TripleElement _object, final long offset, final long limit,
             final List<Binding> bindings)
     {
+        // Translate the given Jena Binding objects into Maps that map
+        // variables (Jena Var objects) to the HDT identifiers of the
+        // corresponding RDF terms (Jena Node objects) that the Binding
+        // objects bind to the variables.
+        // Doing this translation upfront is an optimization because it
+        // avoids repeating the same HDT dictionary lookups over and over
+        // again.
+        final List<Map<Var,Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var,Integer>>();
+        for ( Binding solmap : bindings )
+        {
+            final Map<Var,Integer> solmapWithHdtIDs = new HashMap<Var,Integer>();
+            final Iterator<Var> it = solmap.vars();
+            while ( it.hasNext() )
+            {
+                final Var var = it.next();
+
+                int id = dictionary.getIntID( solmap.get(var),
+                                              TripleComponentRole.SUBJECT );
+
+                final int idP = dictionary.getIntID( solmap.get(var),
+                                                     TripleComponentRole.PREDICATE );
+                if ( idP != -1 )
+                {
+                    if ( id != -1 && id != idP )
+                        throw new IllegalStateException();
+
+                    id = idP;
+                }
+
+                final int idO = dictionary.getIntID( solmap.get(var),
+                                                     TripleComponentRole.OBJECT );
+                if ( idO != -1 )
+                {
+                    if ( id != -1 && id != idO )
+                        throw new IllegalStateException();
+
+                    id = idO;
+                }
+
+                solmapWithHdtIDs.put( var, id );
+            }
+
+            solmapsWithHdtIDs.add( solmapWithHdtIDs );
+        }
+
+        return getBindingFragmentInHDT(_subject, _predicate, _object,
+                                       offset, limit,
+                                       solmapsWithHdtIDs);
+    }
+
+    public TriplePatternFragment getBindingFragmentInHDT(
+            final TripleElement _subject, final TripleElement _predicate,
+            final TripleElement _object, final long offset, final long limit,
+            final List<Map<Var,Integer>> solmapsWithHdtIDs)
+    {
         if (offset < 0)
         {
             throw new IndexOutOfBoundsException("offset");
@@ -257,7 +315,7 @@ public class HdtDataSource extends DataSource
                 }
 
                 TripleID tripleId = matches.next();
-                if ( isValid(tripleId, bindings, subjectVar, predicateVar, objectVar, dictionary) )
+                if ( isValid(tripleId, solmapsWithHdtIDs, subjectVar, predicateVar, objectVar, dictionary) )
                 {
                     checkedResults++;
                 }
@@ -275,7 +333,7 @@ public class HdtDataSource extends DataSource
             while (validResults < limit && matches.hasNext())
             {
                 TripleID tripleId = matches.next();
-                if ( isValid(tripleId, bindings, subjectVar, predicateVar, objectVar, dictionary) )
+                if ( isValid(tripleId, solmapsWithHdtIDs, subjectVar, predicateVar, objectVar, dictionary) )
                 {
                     triples.add(triples.asStatement(toTriple(tripleId)));
                     validResults++;
@@ -333,13 +391,13 @@ public class HdtDataSource extends DataSource
      * with at least on of the solution mappings in solMapSet.
      */
     static public boolean isValid(final TripleID tripleId,
-            final List<Binding> solMapSet, final Var subjectVar,
-            final Var predicateVar, final Var objectVar,
+            final List<Map<Var,Integer>> solmapsWithHdtIDs,
+            final Var subjectVar, final Var predicateVar, final Var objectVar,
             final NodeDictionary dictionary)
     {
-        for (Binding solMap : solMapSet)
+        for (Map<Var,Integer> solMapWithHdtIDs : solmapsWithHdtIDs)
         {
-            if ( checkCompatibility(tripleId, solMap, subjectVar, predicateVar, objectVar, dictionary) )
+            if ( checkCompatibility(tripleId, solMapWithHdtIDs, subjectVar, predicateVar, objectVar, dictionary) )
             {
                 return true;
             }
@@ -354,38 +412,35 @@ public class HdtDataSource extends DataSource
      * with the given solution mapping (solMap).
      */
     static public boolean checkCompatibility(final TripleID tripleId,
-            final Binding solMap, final Var subjectVar,
-            final Var predicateVar, final Var objectVar,
+            final Map<Var,Integer> solMapWithHdtIDs,
+            final Var subjectVar, final Var predicateVar, final Var objectVar,
             final NodeDictionary dictionary)
     {
-        if (subjectVar != null && solMap.contains(subjectVar))
+        if (subjectVar != null && solMapWithHdtIDs.containsKey(subjectVar))
         {
-            Node a = dictionary.getNode(tripleId.getSubject(),
-                    TripleComponentRole.SUBJECT);
-            Node b = solMap.get(subjectVar);
-            if (!a.equals(b))
+            final int a = tripleId.getSubject();
+            final int b = solMapWithHdtIDs.get(subjectVar);
+            if ( a != b )
             {
                 return false;
             }
         }
 
-        if (predicateVar != null && solMap.contains(predicateVar))
+        if (predicateVar != null && solMapWithHdtIDs.containsKey(predicateVar))
         {
-            Node a = dictionary.getNode(tripleId.getPredicate(),
-                    TripleComponentRole.PREDICATE);
-            Node b = solMap.get(predicateVar);
-            if (!a.equals(b))
+            final int a = tripleId.getPredicate();
+            final int b = solMapWithHdtIDs.get(predicateVar);
+            if ( a != b )
             {
                 return false;
             }
         }
 
-        if (objectVar != null && solMap.contains(objectVar))
+        if (objectVar != null && solMapWithHdtIDs.containsKey(objectVar))
         {
-            Node a = dictionary.getNode(tripleId.getObject(),
-                    TripleComponentRole.OBJECT);
-            Node b = solMap.get(objectVar);
-            if (!a.equals(b))
+            final int a = tripleId.getObject();
+            final int b = solMapWithHdtIDs.get(objectVar);
+            if ( a != b )
             {
                 return false;
             }
