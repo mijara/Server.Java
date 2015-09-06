@@ -238,6 +238,10 @@ public class HdtDataSource extends DataSource
         int j = 0;
         if (hasMatches)
         {
+            Var subjectVar   = ( _subject.name.equals("Var") )   ? (Var) _subject.object : null;
+            Var predicateVar = ( _predicate.name.equals("Var") ) ? (Var) _predicate.object : null;
+            Var objectVar    = ( _object.name.equals("Var") )    ? (Var) _object.object : null;
+
             matches.goToStart();
             // iterate over the matching triples until we are at the correct
             // offset
@@ -252,7 +256,7 @@ public class HdtDataSource extends DataSource
                 }
 
                 TripleID tripleId = matches.next();
-                if ( isValid(tripleId, bindings, _subject, _predicate, _object, dictionary) )
+                if ( isValid(tripleId, bindings, subjectVar, predicateVar, objectVar, dictionary) )
                 {
                     checkedResults++;
                 }
@@ -328,14 +332,10 @@ public class HdtDataSource extends DataSource
      * with at least on of the solution mappings in solMapSet.
      */
     static public boolean isValid(final TripleID tripleId,
-            final List<Binding> solMapSet, final TripleElement _subject,
-            final TripleElement _predicate, final TripleElement _object,
+            final List<Binding> solMapSet, final Var subjectVar,
+            final Var predicateVar, final Var objectVar,
             final NodeDictionary dictionary)
     {
-        Var subjectVar   = ( _subject.name.equals("Var") )   ? (Var) _subject.object : null;
-        Var predicateVar = ( _predicate.name.equals("Var") ) ? (Var) _predicate.object : null;
-        Var objectVar    = ( _object.name.equals("Var") )    ? (Var) _object.object : null;
-        
         for (Binding solMap : solMapSet)
         {
             if ( checkCompatibility(tripleId, solMap, subjectVar, predicateVar, objectVar, dictionary) )
