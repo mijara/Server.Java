@@ -233,15 +233,16 @@ public class HdtDataSource extends DataSource
                 new TripleID(subjectId, predicateId, objectId));
         final boolean hasMatches = matches.hasNext();
 
+        // prepare for repeatedly calling the isValid method 
+        final Var subjectVar   = ( _subject.name.equals("Var") )   ? (Var) _subject.object : null;
+        final Var predicateVar = ( _predicate.name.equals("Var") ) ? (Var) _predicate.object : null;
+        final Var objectVar    = ( _object.name.equals("Var") )    ? (Var) _object.object : null;
+
         int validResults = 0;
         int checkedResults = 0;
         int j = 0;
         if (hasMatches)
         {
-            Var subjectVar   = ( _subject.name.equals("Var") )   ? (Var) _subject.object : null;
-            Var predicateVar = ( _predicate.name.equals("Var") ) ? (Var) _predicate.object : null;
-            Var objectVar    = ( _object.name.equals("Var") )    ? (Var) _object.object : null;
-
             matches.goToStart();
             // iterate over the matching triples until we are at the correct
             // offset
@@ -274,7 +275,7 @@ public class HdtDataSource extends DataSource
             while (validResults < limit && matches.hasNext())
             {
                 TripleID tripleId = matches.next();
-                if ( isValid(tripleId, bindings, _subject, _predicate, _object, dictionary) )
+                if ( isValid(tripleId, bindings, subjectVar, predicateVar, objectVar, dictionary) )
                 {
                     triples.add(triples.asStatement(toTriple(tripleId)));
                     validResults++;
