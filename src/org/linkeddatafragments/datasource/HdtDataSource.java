@@ -185,53 +185,52 @@ public class HdtDataSource extends DataSource
         // Doing this translation upfront is an optimization because it
         // avoids repeating the same HDT dictionary lookups over and over
         // again.
-        final List<Map<Var,Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var,Integer>>();
-        for ( Binding solmap : bindings )
+        final List<Map<Var, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var, Integer>>();
+        for (Binding solmap : bindings)
         {
-            final Map<Var,Integer> solmapWithHdtIDs = new HashMap<Var,Integer>();
+            final Map<Var, Integer> solmapWithHdtIDs = new HashMap<Var, Integer>();
             final Iterator<Var> it = solmap.vars();
-            while ( it.hasNext() )
+            while (it.hasNext())
             {
                 final Var var = it.next();
 
-                int id = dictionary.getIntID( solmap.get(var),
-                                              TripleComponentRole.SUBJECT );
+                int id = dictionary.getIntID(solmap.get(var),
+                        TripleComponentRole.SUBJECT);
 
-                final int idP = dictionary.getIntID( solmap.get(var),
-                                                     TripleComponentRole.PREDICATE );
-                if ( idP != -1 )
+                final int idP = dictionary.getIntID(solmap.get(var),
+                        TripleComponentRole.PREDICATE);
+                if (idP != -1)
                 {
-                    if ( id != -1 && id != idP )
+                    if (id != -1 && id != idP)
                         throw new IllegalStateException();
 
                     id = idP;
                 }
 
-                final int idO = dictionary.getIntID( solmap.get(var),
-                                                     TripleComponentRole.OBJECT );
-                if ( idO != -1 )
+                final int idO = dictionary.getIntID(solmap.get(var),
+                        TripleComponentRole.OBJECT);
+                if (idO != -1)
                 {
-                    if ( id != -1 && id != idO )
+                    if (id != -1 && id != idO)
                         throw new IllegalStateException();
 
                     id = idO;
                 }
 
-                solmapWithHdtIDs.put( var, id );
+                solmapWithHdtIDs.put(var, id);
             }
 
-            solmapsWithHdtIDs.add( solmapWithHdtIDs );
+            solmapsWithHdtIDs.add(solmapWithHdtIDs);
         }
 
-        return getBindingFragmentInHDT(_subject, _predicate, _object,
-                                       offset, limit,
-                                       solmapsWithHdtIDs);
+        return getBindingFragmentInHDT(_subject, _predicate, _object, offset,
+                limit, solmapsWithHdtIDs);
     }
 
     public TriplePatternFragment getBindingFragmentInHDT(
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, final long offset, final long limit,
-            final List<Map<Var,Integer>> solmapsWithHdtIDs)
+            final List<Map<Var, Integer>> solmapsWithHdtIDs)
     {
         if (offset < 0)
         {
@@ -291,10 +290,13 @@ public class HdtDataSource extends DataSource
                 new TripleID(subjectId, predicateId, objectId));
         final boolean hasMatches = matches.hasNext();
 
-        // prepare for repeatedly calling the isValid method 
-        final Var subjectVar   = ( _subject.name.equals("Var") )   ? (Var) _subject.object : null;
-        final Var predicateVar = ( _predicate.name.equals("Var") ) ? (Var) _predicate.object : null;
-        final Var objectVar    = ( _object.name.equals("Var") )    ? (Var) _object.object : null;
+        // prepare for repeatedly calling the isValid method
+        final Var subjectVar = (_subject.name.equals("Var")) ? (Var) _subject.object
+                : null;
+        final Var predicateVar = (_predicate.name.equals("Var")) ? (Var) _predicate.object
+                : null;
+        final Var objectVar = (_object.name.equals("Var")) ? (Var) _object.object
+                : null;
 
         int validResults = 0;
         int checkedResults = 0;
@@ -315,7 +317,8 @@ public class HdtDataSource extends DataSource
                 }
 
                 TripleID tripleId = matches.next();
-                if ( isValid(tripleId, solmapsWithHdtIDs, subjectVar, predicateVar, objectVar, dictionary) )
+                if (isValid(tripleId, solmapsWithHdtIDs, subjectVar,
+                        predicateVar, objectVar, dictionary))
                 {
                     checkedResults++;
                 }
@@ -333,7 +336,8 @@ public class HdtDataSource extends DataSource
             while (validResults < limit && matches.hasNext())
             {
                 TripleID tripleId = matches.next();
-                if ( isValid(tripleId, solmapsWithHdtIDs, subjectVar, predicateVar, objectVar, dictionary) )
+                if (isValid(tripleId, solmapsWithHdtIDs, subjectVar,
+                        predicateVar, objectVar, dictionary))
                 {
                     triples.add(triples.asStatement(toTriple(tripleId)));
                     validResults++;
@@ -343,22 +347,24 @@ public class HdtDataSource extends DataSource
             }
         }
 
-        // at this point it holds that: offset <= checkedResults <= offset + limit
+        // at this point it holds that: offset <= checkedResults <= offset +
+        // limit
         long _estimatedTotal;
-        if ( checkedResults > 0 )
+        if (checkedResults > 0)
         {
-            if ( validResults < limit )
+            if (validResults < limit)
             {
                 _estimatedTotal = checkedResults;
             }
-            else if ( ! matches.hasNext() )
+            else if (!matches.hasNext())
             {
                 _estimatedTotal = checkedResults;
             }
             else
             {
                 // in this case we have: checkedResults = offset + limit
-                _estimatedTotal = Math.max( checkedResults + 1, matches.estimatedNumResults() );
+                _estimatedTotal = Math.max(checkedResults + 1,
+                        matches.estimatedNumResults());
             }
         }
         else
@@ -391,13 +397,14 @@ public class HdtDataSource extends DataSource
      * with at least on of the solution mappings in solMapSet.
      */
     static public boolean isValid(final TripleID tripleId,
-            final List<Map<Var,Integer>> solmapsWithHdtIDs,
+            final List<Map<Var, Integer>> solmapsWithHdtIDs,
             final Var subjectVar, final Var predicateVar, final Var objectVar,
             final NodeDictionary dictionary)
     {
-        for (Map<Var,Integer> solMapWithHdtIDs : solmapsWithHdtIDs)
+        for (Map<Var, Integer> solMapWithHdtIDs : solmapsWithHdtIDs)
         {
-            if ( checkCompatibility(tripleId, solMapWithHdtIDs, subjectVar, predicateVar, objectVar, dictionary) )
+            if (checkCompatibility(tripleId, solMapWithHdtIDs, subjectVar,
+                    predicateVar, objectVar, dictionary))
             {
                 return true;
             }
@@ -412,15 +419,15 @@ public class HdtDataSource extends DataSource
      * with the given solution mapping (solMap).
      */
     static public boolean checkCompatibility(final TripleID tripleId,
-            final Map<Var,Integer> solMapWithHdtIDs,
-            final Var subjectVar, final Var predicateVar, final Var objectVar,
+            final Map<Var, Integer> solMapWithHdtIDs, final Var subjectVar,
+            final Var predicateVar, final Var objectVar,
             final NodeDictionary dictionary)
     {
         if (subjectVar != null && solMapWithHdtIDs.containsKey(subjectVar))
         {
             final int a = tripleId.getSubject();
             final int b = solMapWithHdtIDs.get(subjectVar);
-            if ( a != b )
+            if (a != b)
             {
                 return false;
             }
@@ -430,7 +437,7 @@ public class HdtDataSource extends DataSource
         {
             final int a = tripleId.getPredicate();
             final int b = solMapWithHdtIDs.get(predicateVar);
-            if ( a != b )
+            if (a != b)
             {
                 return false;
             }
@@ -440,7 +447,7 @@ public class HdtDataSource extends DataSource
         {
             final int a = tripleId.getObject();
             final int b = solMapWithHdtIDs.get(objectVar);
-            if ( a != b )
+            if (a != b)
             {
                 return false;
             }

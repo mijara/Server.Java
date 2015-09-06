@@ -2,11 +2,11 @@
   "title": "My Linked Data Fragments server",
 
   "datasources": {
-    "swdf": {
-      "title": "Semantic Web Dog Food",
+    "watdiv": {
+      "title": "Watdiv",
       "type": "HdtDatasource",
-      "description": "Semantic Web Dog Food with an HDT back-end",
-      "settings": { "file": "data/swdf-2012-11-28.hdt" }
+      "description": "WatDiv with HDT back-end",
+      "settings": { "file": "data/watdiv.10M.hdt" }
     }
   },
 
