@@ -121,14 +121,32 @@ public class TriplePatternFragmentServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            throw new ServletException(e);
+            throw new ServletException( e.getMessage(), e );
         }
+    }
+
+    @Override
+    public void destroy()
+    {
+        for ( IDataSource dataSource : dataSources.values() ) {
+            try {
+                dataSource.close();
+            }
+            catch( Exception e ) {
+                // ignore
+            }
+        }   
     }
 
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException
     {
+if ( request.getQueryString() == null ) {
+System.out.println( request.getRequestURI() );
+} else {
+System.out.println( request.getRequestURI() + "?" + request.getQueryString() );
+}
         // possible inputs: s: ?var, p: blank node, o: literal/URI
         try
         {
@@ -142,7 +160,8 @@ public class TriplePatternFragmentServlet extends HttpServlet
             final IDataSource dataSource = dataSources.get(dataSourceName);
             if (dataSource == null)
             {
-                throw new Exception("Data source not found.");
+                throw new Exception(
+                        "Data source not found (" + dataSourceName + ")." );
             }
 
             // query the fragment
@@ -216,6 +235,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             if (offset > 0)
             {
                 pagedUrl.setParameter("page", Long.toString(page - 1));
+
                 output.add(fragmentId, HYDRA_PREVIOUSPAGE,
                         output.createResource(pagedUrl.toString()));
             }
@@ -258,7 +278,9 @@ public class TriplePatternFragmentServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            throw new ServletException(e);
+System.err.println( "Exception caught: " + e.getMessage() );
+e.printStackTrace( System.err );
+            throw new ServletException( e.getMessage(), e );
         }
     }
 

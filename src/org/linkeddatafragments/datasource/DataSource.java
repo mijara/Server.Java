@@ -22,4 +22,8 @@ public abstract class DataSource implements IDataSource {
     public String getTitle() {
         return this.title;
     };
+
+    @Override
+    public void close() {}
+
 }

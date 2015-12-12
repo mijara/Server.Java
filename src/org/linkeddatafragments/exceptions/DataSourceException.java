@@ -7,7 +7,7 @@ package org.linkeddatafragments.exceptions;
 public class DataSourceException extends Exception {
 
     public DataSourceException(Throwable cause) {
-        super(cause.getMessage());
+        super(cause.getMessage(), cause);
     }
 
     public DataSourceException(String message) {
