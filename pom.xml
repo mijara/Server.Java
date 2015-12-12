@@ -6,6 +6,13 @@
     <version>0.0.1</version>
     <packaging>war</packaging>
 
+<repositories>
+<repository>
+   <id>bigdata.releases</id>
+   <url>http://www.systap.com/maven/releases</url>
+</repository>
+</repositories>
+
     <properties>
         <jettyVersion>9.2.5.v20141112</jettyVersion>
     </properties>
@@ -16,6 +23,41 @@
             <artifactId>hdt-jena</artifactId>
             <version>1.1</version>
         </dependency>
+ <dependency>
+	<groupId>org.openrdf.sesame</groupId>
+	<artifactId>sesame-rio-api</artifactId>
+	<version>2.7.13</version>
+</dependency>
+<dependency>
+	<groupId>org.openrdf.sesame</groupId>
+	<artifactId>sesame-rio-turtle</artifactId>
+	<version>2.7.13</version>
+</dependency>
+ <dependency>
+	<groupId>org.openrdf.sesame</groupId>
+	<artifactId>sesame-rio-ntriples</artifactId>
+	<version>2.7.13</version>
+</dependency>
+<dependency>
+	<groupId>org.openrdf.sesame</groupId>
+	<artifactId>sesame-rio-rdfxml</artifactId>
+	<version>2.7.13</version>
+</dependency>
+<dependency>
+	<groupId>org.openrdf.sesame</groupId>
+	<artifactId>sesame-rio-binary</artifactId>
+	<version>2.7.13</version>
+</dependency>
+<dependency>
+	<groupId>org.openrdf.sesame</groupId>
+	<artifactId>sesame-rio-rdfjson</artifactId>
+	<version>2.7.13</version>
+</dependency>
+ <dependency>
+   <groupId>com.bigdata</groupId>
+   <artifactId>bigdata</artifactId>
+   <version>1.5.3</version>
+ </dependency>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>jena-core</artifactId>
@@ -30,6 +72,11 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.3.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.3.2</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
