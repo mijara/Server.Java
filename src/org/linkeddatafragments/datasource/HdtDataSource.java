@@ -392,7 +392,11 @@ public class HdtDataSource extends DataSource
         }
 //         final long estimatedTotal = _estimatedTotal;
 //         final long estimatedpageTotal = (limit * estimatedTotal) / new_estimate;
-        final long estimatedValid = (limit * _estimatedMatches) / testedMatchesUntilFirstPageOfValidMatches;
+        final long estimatedValid;
+        if ( testedMatchesUntilFirstPageOfValidMatches > 0 )
+            estimatedValid = (limit * _estimatedMatches) / testedMatchesUntilFirstPageOfValidMatches;
+        else
+            estimatedValid = (limit * _estimatedMatches) / testedMatchesSoFar;
         // create the fragment
         return new TriplePatternFragment()
         {
