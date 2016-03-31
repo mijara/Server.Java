@@ -56,8 +56,9 @@ public class EvaluationTest
         final TripleElement _object = TriplePatternFragmentServlet
                 .parseAsNode("<http://data.semanticweb.org/person/chi-young-oh>");
 
-        TriplePatternFragment tpf = datasource.getBindingFragment(_subject, _predicate, _object, 2, 4,
+        TriplePatternFragment tpf = datasource.getBindingFragmentUsingHdtIds(_subject, _predicate, _object, 2, 4,
                 bindingsList);
+        System.out.println("Estimated size: " + tpf.getTotalSize());
         Model m = tpf.getTriples();
         System.out.println(m.size());
     }
