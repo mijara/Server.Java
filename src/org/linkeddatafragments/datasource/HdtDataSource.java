@@ -247,63 +247,66 @@ public class HdtDataSource extends DataSource
             while (it.hasNext())
             {
                 final Var var = it.next();
-
-                int id = dictionary.getIntID(solmap.get(var),
-                        TripleComponentRole.SUBJECT);
-                subjectId = id;
-
-                final int idP = dictionary.getIntID(solmap.get(var),
-                        TripleComponentRole.PREDICATE);
-                if (idP != -1)
+                if (_subject.name.equals("Var"))
                 {
-                    if (id != -1 && id != idP)
-                        throw new IllegalStateException();
-
-                    predicateId = idP;
-                }
-
-                final int idO = dictionary.getIntID(solmap.get(var),
-                        TripleComponentRole.OBJECT);
-                if (idO != -1)
-                {
-                    if (id != -1 && id != idO)
-                        throw new IllegalStateException();
-
-                    id = idO;
-                    objectId = idO;
-                }
-                subjectId = id;
-                final IteratorTripleID matches = datasource.getTriples()
-                        .search(new TripleID(subjectId, predicateId, objectId));
-                final boolean hasMatches = matches.hasNext();
-                long tmpEstimatedTotal = hasMatches
-                        ? Math.max(matches.estimatedNumResults(), 1) : 0;
-                if (countBindingsSoFar < tenPercentBindings)
-                {
-                    estimatedTotal += tmpEstimatedTotal;
-                }
-
-                if (hasMatches)
-                {
-                    matches.goToStart();
-                    while (!(atOffset = triplesCheckedSoFar == offset)
-                            && matches.hasNext())
+                    if (((Var) _subject.object).getName().equals(var.getName()))
                     {
-                        matches.next();
-                        triplesCheckedSoFar++;
+                        int id = dictionary.getIntID(solmap.get(var),
+                                TripleComponentRole.SUBJECT);
+                        subjectId = id;
                     }
-                    // try to add `limit` triples to the result model
-                    if (atOffset)
+                }
+                if (_object.name.equals("Var"))
+                {
+                    if (((Var) _object.object).getName().equals(var.getName()))
                     {
-                        int i = triplesAddedInCurrentPage;
-                        for (i = triplesAddedInCurrentPage; i < limit
-                                && matches.hasNext(); i++)
-                            triples.add(triples
-                                    .asStatement(toTriple(matches.next())));
-                        if (i < limit)
-                        {
-                            triplesAddedInCurrentPage = i;
-                        }
+                        int id = dictionary.getIntID(solmap.get(var),
+                                TripleComponentRole.OBJECT);
+                        objectId = id;
+                    }
+                }
+                if (_predicate.name.equals("Var"))
+                {
+                    if (((Var) _predicate.object).getName()
+                            .equals(var.getName()))
+                    {
+                        int id = dictionary.getIntID(solmap.get(var),
+                                TripleComponentRole.PREDICATE);
+                        predicateId = id;
+                    }
+                }
+            }
+            
+            final IteratorTripleID matches = datasource.getTriples()
+                    .search(new TripleID(subjectId, predicateId, objectId));
+            final boolean hasMatches = matches.hasNext();
+            long tmpEstimatedTotal = hasMatches
+                    ? Math.max(matches.estimatedNumResults(), 1) : 0;
+            if (countBindingsSoFar < tenPercentBindings)
+            {
+                estimatedTotal += tmpEstimatedTotal;
+            }
+
+            if (hasMatches)
+            {
+                matches.goToStart();
+                while (!(atOffset = triplesCheckedSoFar == offset)
+                        && matches.hasNext())
+                {
+                    matches.next();
+                    triplesCheckedSoFar++;
+                }
+                // try to add `limit` triples to the result model
+                if (atOffset)
+                {
+                    int i = triplesAddedInCurrentPage;
+                    for (i = triplesAddedInCurrentPage; i < limit
+                            && matches.hasNext(); i++)
+                        triples.add(
+                                triples.asStatement(toTriple(matches.next())));
+                    if (i < limit)
+                    {
+                        triplesAddedInCurrentPage = i;
                     }
                 }
             }
