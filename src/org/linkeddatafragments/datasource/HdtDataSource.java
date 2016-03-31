@@ -467,10 +467,6 @@ public class HdtDataSource extends DataSource
         final Var objectVar = (_object.name.equals("Var"))
                 ? (Var) _object.object : null;
 
-        // int validResults = 0;
-        // int checkedResults = 0;
-        // int j = 0;
-        // int new_estimate = 0;
         int testedMatchesSoFar = 0; // everything from 'matches' that we have
                                     // looked at so far
         int validMatchesSoFar = 0; // the subset of 'testedMatchesSoFar' that
@@ -486,7 +482,6 @@ public class HdtDataSource extends DataSource
             // solution mappings in 'bindings')
             while (matches.hasNext())
             {
-                // if (checkedResults >= offset)
                 if (validMatchesSoFar >= offset)
                 {
                     break;
@@ -496,26 +491,22 @@ public class HdtDataSource extends DataSource
                 if (isValid(tripleId, solmapsWithHdtIDs, subjectVar,
                         predicateVar, objectVar, dictionary))
                 {
-                    // checkedResults++;
                     validMatchesSoFar++;
                 }
-                // j++;
+
                 testedMatchesSoFar++;
-                // if(checkedResults == limit){
                 if (validMatchesSoFar == limit)
                 {
-                    // new_estimate = j;
                     testedMatchesUntilFirstPageOfValidMatches = testedMatchesSoFar;
                 }
             }
 
             // now we are at the correct offset; add `limit` triples to the
             // result model
-            // (againg, ignoring matching triples that are not compatible with
+            // (again, ignoring matching triples that are not compatible with
             // any of the
             // solution mappings in 'bindings')
 
-            // validResults = 0;
             int validMatchesForRequestedPage = 0;
             while (validMatchesForRequestedPage < limit && matches.hasNext())
             {
@@ -524,55 +515,33 @@ public class HdtDataSource extends DataSource
                         predicateVar, objectVar, dictionary))
                 {
                     triples.add(triples.asStatement(toTriple(tripleId)));
-                    // validResults++;
-                    // checkedResults++;
                     validMatchesSoFar++;
                     validMatchesForRequestedPage++;
                 }
-                // j++;
                 testedMatchesSoFar++;
             }
         }
 
-        // // at this point it holds that: offset <= checkedResults <= offset +
-        // limit
         // at this point it holds that: offset <= validMatchesSoFar <= offset +
         // limit
-        // long _estimatedTotal;
-        long _estimatedMatches;
-        // if (checkedResults > 0)
-        if (validMatchesSoFar > 0)
-        {
-            // if (validResults < limit)
-            // {
-            // _estimatedTotal = checkedResults;
-            // }
-            // else if (!matches.hasNext())
-            // {
-            // _estimatedTotal = checkedResults;
-            // }
-            // else
-            // {
-            // // in this case we have: checkedResults = offset + limit
-            // _estimatedTotal = Math.max(checkedResults + 1,
-            // matches.estimatedNumResults());
-            // }
-            _estimatedMatches = matches.estimatedNumResults();
-        }
-        else
-        {
-            // _estimatedTotal = 0;
-            _estimatedMatches = 0L;
-        }
-        // final long estimatedTotal = _estimatedTotal;
-        // final long estimatedpageTotal = (limit * estimatedTotal) /
-        // new_estimate;
         final long estimatedValid;
-        if (testedMatchesUntilFirstPageOfValidMatches > 0)
-            estimatedValid = (limit * _estimatedMatches)
-                    / testedMatchesUntilFirstPageOfValidMatches;
+        if (validMatchesSoFar == 0)
+        {
+            estimatedValid = 0L;
+        }
+        else if (validMatchesSoFar < limit)
+        {
+            estimatedValid = validMatchesSoFar;
+        }
         else
-            estimatedValid = (limit * _estimatedMatches) / testedMatchesSoFar;
+        {
+            final long estimatedMatches = matches.estimatedNumResults();
+            if ( testedMatchesUntilFirstPageOfValidMatches > 0 )
+                estimatedValid = (limit * estimatedMatches) / testedMatchesUntilFirstPageOfValidMatches;
+            else
+                estimatedValid = (limit * estimatedMatches) / testedMatchesSoFar;
+        }
+
         // create the fragment
         return new TriplePatternFragment()
         {
@@ -585,7 +554,6 @@ public class HdtDataSource extends DataSource
             @Override
             public long getTotalSize()
             {
-                // return estimatedpageTotal;
                 return estimatedValid;
             }
 
