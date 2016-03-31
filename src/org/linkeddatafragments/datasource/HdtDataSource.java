@@ -298,10 +298,13 @@ public class HdtDataSource extends DataSource
         final Var objectVar = (_object.name.equals("Var")) ? (Var) _object.object
                 : null;
 
-        int validResults = 0;
-        int checkedResults = 0;
-        int j = 0;
-        int new_estimate = 0;
+//         int validResults = 0;
+//         int checkedResults = 0;
+//         int j = 0;
+//         int new_estimate = 0;
+        int testedMatchesSoFar = 0; // everything from 'matches' that we have looked at so far
+        int validMatchesSoFar = 0; // the subset of 'testedMatchesSoFar' that turned out to be valid for the brTPF
+        int testedMatchesUntilFirstPageOfValidMatches = 0;
         if (hasMatches)
         {
             matches.goToStart();
@@ -312,7 +315,8 @@ public class HdtDataSource extends DataSource
             // solution mappings in 'bindings')
             while (matches.hasNext())
             {
-                if (checkedResults >= offset)
+//                 if (checkedResults >= offset)
+                if (validMatchesSoFar >= offset)
                 {
                     break;
                 }
@@ -321,11 +325,15 @@ public class HdtDataSource extends DataSource
                 if (isValid(tripleId, solmapsWithHdtIDs, subjectVar,
                         predicateVar, objectVar, dictionary))
                 {
-                    checkedResults++;
+//                     checkedResults++;
+                    validMatchesSoFar++;
                 }
-                j++;
-                if(checkedResults == limit){
-                    new_estimate = j;
+//                 j++;
+                testedMatchesSoFar++;
+//                 if(checkedResults == limit){
+                if(validMatchesSoFar == limit){
+//                     new_estimate = j;
+                    testedMatchesUntilFirstPageOfValidMatches = testedMatchesSoFar;
                 }
             }
 
@@ -335,47 +343,56 @@ public class HdtDataSource extends DataSource
             // any of the
             // solution mappings in 'bindings')
 
-            validResults = 0;
-            while (validResults < limit && matches.hasNext())
+//             validResults = 0;
+            int validMatchesForRequestedPage = 0;
+            while (validMatchesForRequestedPage < limit && matches.hasNext())
             {
                 TripleID tripleId = matches.next();
                 if (isValid(tripleId, solmapsWithHdtIDs, subjectVar,
                         predicateVar, objectVar, dictionary))
                 {
                     triples.add(triples.asStatement(toTriple(tripleId)));
-                    validResults++;
-                    checkedResults++;
+//                     validResults++;
+//                     checkedResults++;
+                    validMatchesSoFar++;
+                    validMatchesForRequestedPage++;
                 }
-                j++;
+//                 j++;
+                testedMatchesSoFar++;
             }
         }
 
-        // at this point it holds that: offset <= checkedResults <= offset +
-        // limit
-        long _estimatedTotal;
-        if (checkedResults > 0)
+//         // at this point it holds that: offset <= checkedResults <= offset + limit
+        // at this point it holds that: offset <= validMatchesSoFar <= offset + limit
+//         long _estimatedTotal;
+        long _estimatedMatches;
+//         if (checkedResults > 0)
+        if (validMatchesSoFar > 0)
         {
-            if (validResults < limit)
-            {
-                _estimatedTotal = checkedResults;
-            }
-            else if (!matches.hasNext())
-            {
-                _estimatedTotal = checkedResults;
-            }
-            else
-            {
-                // in this case we have: checkedResults = offset + limit
-                _estimatedTotal = Math.max(checkedResults + 1,
-                        matches.estimatedNumResults());
-            }
+//             if (validResults < limit)
+//             {
+//                 _estimatedTotal = checkedResults;
+//             }
+//             else if (!matches.hasNext())
+//             {
+//                 _estimatedTotal = checkedResults;
+//             }
+//             else
+//             {
+//                 // in this case we have: checkedResults = offset + limit
+//                 _estimatedTotal = Math.max(checkedResults + 1,
+//                         matches.estimatedNumResults());
+//             }
+            _estimatedMatches = matches.estimatedNumResults();
         }
         else
         {
-            _estimatedTotal = 0;
+//             _estimatedTotal = 0;
+            _estimatedMatches = 0L;
         }
-        final long estimatedTotal = _estimatedTotal;
-        final long estimatedpageTotal = (limit * estimatedTotal) / new_estimate;
+//         final long estimatedTotal = _estimatedTotal;
+//         final long estimatedpageTotal = (limit * estimatedTotal) / new_estimate;
+        final long estimatedValid = (limit * _estimatedMatches) / testedMatchesUntilFirstPageOfValidMatches;
         // create the fragment
         return new TriplePatternFragment()
         {
@@ -388,7 +405,8 @@ public class HdtDataSource extends DataSource
             @Override
             public long getTotalSize()
             {
-                return estimatedpageTotal;
+//                 return estimatedpageTotal;
+                return estimatedValid;
             }
             
         };
