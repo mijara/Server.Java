@@ -185,6 +185,16 @@ public class HdtDataSource extends DataSource
             final TripleElement _object, final long offset, final long limit,
             final List<Binding> bindings)
     {
+//         return getBindingFragmentByTriplePatternSubstitution(
+        return getBindingFragmentByTestingHdtMatches(
+                       _subject, _predicate, _object, offset, limit, bindings);
+    }
+
+    public TriplePatternFragment getBindingFragmentByTriplePatternSubstitution(
+            final TripleElement _subject, final TripleElement _predicate,
+            final TripleElement _object, final long offset, final long limit,
+            final List<Binding> bindings)
+    {
         // Translate the given Jena Binding objects into Maps that map
         // variables (Jena Var objects) to the HDT identifiers of the
         // corresponding RDF terms (Jena Node objects) that the Binding
@@ -331,7 +341,7 @@ public class HdtDataSource extends DataSource
         };
     }
 
-    public TriplePatternFragment getBindingFragmentUsingHdtIds(
+    public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, final long offset, final long limit,
             final List<Binding> bindings)
