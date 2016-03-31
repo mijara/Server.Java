@@ -301,6 +301,7 @@ public class HdtDataSource extends DataSource
         int validResults = 0;
         int checkedResults = 0;
         int j = 0;
+        int new_estimate = 0;
         if (hasMatches)
         {
             matches.goToStart();
@@ -322,8 +323,10 @@ public class HdtDataSource extends DataSource
                 {
                     checkedResults++;
                 }
-
                 j++;
+                if(checkedResults == limit){
+                    new_estimate = j;
+                }
             }
 
             // now we are at the correct offset; add `limit` triples to the
@@ -372,7 +375,7 @@ public class HdtDataSource extends DataSource
             _estimatedTotal = 0;
         }
         final long estimatedTotal = _estimatedTotal;
-
+        final long estimatedpageTotal = (limit * estimatedTotal) / new_estimate;
         // create the fragment
         return new TriplePatternFragment()
         {
@@ -385,8 +388,9 @@ public class HdtDataSource extends DataSource
             @Override
             public long getTotalSize()
             {
-                return estimatedTotal;
+                return estimatedpageTotal;
             }
+            
         };
     }
 
