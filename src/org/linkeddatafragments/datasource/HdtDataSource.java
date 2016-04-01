@@ -326,27 +326,21 @@ public class HdtDataSource extends DataSource
         }
         else
         {
-//            if (bindingsSize <= 10)
-//            {
-                for (int i = 0; i < bindingsSize; i++)
-                {
-                    estimatedTotal = estimatedTotal + estimateResultSetSize(
-                            bindings, _subject, _predicate, _object, subjectId,
-                            predicateId, objectId, i);
-                }
-//            }
-//            else
-//            {
-//                if (countBindingsSoFar < tenPercentBindings)
-//                {
-//                    for (int i = 0; i < 10; i++)
-//                    {
-//                        estimatedTotal = estimatedTotal + estimateResultSetSize(
-//                                bindings, _subject, _predicate, _object,
-//                                subjectId, predicateId, objectId, i);
-//                    }
-//                }
-//            }
+            int maxBindingsToUseInEstimation = 0;
+            if (bindingsSize <= 10)
+            {
+                maxBindingsToUseInEstimation = bindingsSize;
+            } else{
+                maxBindingsToUseInEstimation = 10;
+            }
+            
+            for (int i = 0; i < maxBindingsToUseInEstimation; i++)
+            {
+                estimatedTotal = estimatedTotal + estimateResultSetSize(
+                        bindings, _subject, _predicate, _object, subjectId,
+                        predicateId, objectId, i);
+            }
+            estimatedTotal = estimatedTotal * (bindingsSize / maxBindingsToUseInEstimation);
         }
 
         final long estimatedValid = estimatedTotal;
