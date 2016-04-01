@@ -53,6 +53,5 @@
 	<classpathentry exported="true" kind="var" path="M2_REPO/org/eclipse/jetty/jetty-security/9.2.5.v20141112/jetty-security-9.2.5.v20141112.jar"/>
 	<classpathentry exported="true" kind="var" path="M2_REPO/commons-cli/commons-cli/1.2/commons-cli-1.2.jar"/>
 	<classpathentry kind="var" path="M2_REPO"/>
-	<classpathentry kind="lib" path="/home/olaf/temp/YAGO-Experiments/bigdata-bundled-1.5.3.jar" sourcepath="/bigdata-core"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

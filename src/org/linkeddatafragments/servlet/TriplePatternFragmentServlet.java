@@ -142,11 +142,11 @@ public class TriplePatternFragmentServlet extends HttpServlet
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException
     {
-if ( request.getQueryString() == null ) {
-System.out.println( request.getRequestURI() );
-} else {
-System.out.println( request.getRequestURI() + "?" + request.getQueryString() );
-}
+//if ( request.getQueryString() == null ) {
+//System.out.println( request.getRequestURI() );
+//} else {
+//System.out.println( request.getRequestURI() + "?" + request.getQueryString() );
+//}
         // possible inputs: s: ?var, p: blank node, o: literal/URI
         try
         {

@@ -185,8 +185,8 @@ public class HdtDataSource extends DataSource
             final TripleElement _object, final long offset, final long limit,
             final List<Binding> bindings)
     {
-//         return getBindingFragmentByTriplePatternSubstitution(
-        return getBindingFragmentByTestingHdtMatches(
+         return getBindingFragmentByTriplePatternSubstitution(
+//        return getBindingFragmentByTestingHdtMatches(
                        _subject, _predicate, _object, offset, limit, bindings);
     }
 
@@ -251,6 +251,7 @@ public class HdtDataSource extends DataSource
         int bindingsSize = bindings.size();
         int tenPercentBindings = (int) (bindingsSize * (10.0f / 100.0f));
         int countBindingsSoFar = 0;
+        System.out.println(subjectId + "," + predicateId + "," + objectId);
         for (Binding solmap : bindings)
         {
             final Iterator<Var> it = solmap.vars();
@@ -266,15 +267,6 @@ public class HdtDataSource extends DataSource
                         subjectId = id;
                     }
                 }
-                if (_object.name.equals("Var"))
-                {
-                    if (((Var) _object.object).getName().equals(var.getName()))
-                    {
-                        int id = dictionary.getIntID(solmap.get(var),
-                                TripleComponentRole.OBJECT);
-                        objectId = id;
-                    }
-                }
                 if (_predicate.name.equals("Var"))
                 {
                     if (((Var) _predicate.object).getName()
@@ -283,6 +275,15 @@ public class HdtDataSource extends DataSource
                         int id = dictionary.getIntID(solmap.get(var),
                                 TripleComponentRole.PREDICATE);
                         predicateId = id;
+                    }
+                }
+                if (_object.name.equals("Var"))
+                {
+                    if (((Var) _object.object).getName().equals(var.getName()))
+                    {
+                        int id = dictionary.getIntID(solmap.get(var),
+                                TripleComponentRole.OBJECT);
+                        objectId = id;
                     }
                 }
             }
@@ -309,20 +310,29 @@ public class HdtDataSource extends DataSource
                 // try to add `limit` triples to the result model
                 if (atOffset)
                 {
-                    int i = triplesAddedInCurrentPage;
-                    for (i = triplesAddedInCurrentPage; i < limit
-                            && matches.hasNext(); i++)
+                    while (triplesAddedInCurrentPage < limit
+                            && matches.hasNext())
                         triples.add(
                                 triples.asStatement(toTriple(matches.next())));
-                    if (i < limit)
-                    {
-                        triplesAddedInCurrentPage = i;
-                    }
                 }
             }
             countBindingsSoFar++;
         }
+//        long estimationLastBindingsElement = estimateResultSetSize(bindings,
+//                _subject, _predicate, _object, subjectId, predicateId, objectId,
+//                bindingsSize - 1);
+//        long estimationFirstBindingsElement = estimateResultSetSize(bindings,
+//                _subject, _predicate, _object, subjectId, predicateId, objectId,
+//                0);
+//        long estimationMiddleBindingsElement = estimateResultSetSize(bindings,
+//                _subject, _predicate, _object, subjectId, predicateId, objectId,
+//                (int) (bindingsSize / 2));
+        
         final long estimatedValid = estimatedTotal;
+//        final long estimatedValid = (estimationFirstBindingsElement
+//                + estimationMiddleBindingsElement
+//                + estimationLastBindingsElement) * limit / Math.max(triplesCheckedSoFar,
+//                        1);
         return new TriplePatternFragment()
         {
             @Override
@@ -339,6 +349,50 @@ public class HdtDataSource extends DataSource
             }
 
         };
+    }
+
+    private long estimateResultSetSize(List<Binding> bindings, final TripleElement _subject, final TripleElement _predicate,
+            final TripleElement _object, int subjectId, int predicateId, int objectId, int positionInBindingsList)
+    {
+        Binding binding = bindings.get(positionInBindingsList);
+        final Iterator<Var> it = binding.vars();
+        while (it.hasNext())
+        {
+            final Var var = it.next();
+            if (_subject.name.equals("Var"))
+            {
+                if (((Var) _subject.object).getName().equals(var.getName()))
+                {
+                    int id = dictionary.getIntID(binding.get(var),
+                            TripleComponentRole.SUBJECT);
+                    subjectId = id;
+                }
+            }
+            if (_predicate.name.equals("Var"))
+            {
+                if (((Var) _predicate.object).getName()
+                        .equals(var.getName()))
+                {
+                    int id = dictionary.getIntID(binding.get(var),
+                            TripleComponentRole.PREDICATE);
+                    predicateId = id;
+                }
+            }
+            if (_object.name.equals("Var"))
+            {
+                if (((Var) _object.object).getName().equals(var.getName()))
+                {
+                    int id = dictionary.getIntID(binding.get(var),
+                            TripleComponentRole.OBJECT);
+                    objectId = id;
+                }
+            }
+        }
+        
+        final IteratorTripleID matches = datasource.getTriples()
+                .search(new TripleID(subjectId, predicateId, objectId));
+        
+        return matches.estimatedNumResults();
     }
 
     public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
