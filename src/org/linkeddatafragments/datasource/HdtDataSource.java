@@ -317,30 +317,50 @@ public class HdtDataSource extends DataSource
             countBindingsSoFar++;
         }
 
-        long estimatedTotal = 0;
+        final long minimumTotal = offset + triplesAddedInCurrentPage + 1;
+        final long estimatedTotal;
         if (triplesAddedInCurrentPage < limit)
         {
 //            System.out.println(
 //                    "Triples in current page: " + triplesAddedInCurrentPage);
-            estimatedTotal = triplesAddedInCurrentPage;
+            estimatedTotal = minimumTotal;
         }
         else
         {
-            int maxBindingsToUseInEstimation = 0;
-            if (bindingsSize <= 10)
+            final int THRESHOLD = 10;
+            final int maxBindingsToUseInEstimation;
+            if (bindingsSize <= THRESHOLD)
             {
                 maxBindingsToUseInEstimation = bindingsSize;
             } else{
-                maxBindingsToUseInEstimation = 10;
+                maxBindingsToUseInEstimation = THRESHOLD;
             }
-            
+
+            long estimationSum = 0L;
             for (int i = 0; i < maxBindingsToUseInEstimation; i++)
             {
-                estimatedTotal = estimatedTotal + estimateResultSetSize(
-                        bindings, _subject, _predicate, _object, subjectId,
-                        predicateId, objectId, i);
+                estimationSum += estimateResultSetSize(
+                        bindings.get(i), _subject, _predicate, _object, subjectId,
+                        predicateId, objectId);
             }
-            estimatedTotal = estimatedTotal * (bindingsSize / maxBindingsToUseInEstimation);
+
+            if (bindingsSize <= THRESHOLD)
+            {
+                if ( estimationSum <= minimumTotal )
+                    estimatedTotal = minimumTotal;
+                else
+                    estimatedTotal = estimationSum;
+            }
+            else // bindingsSize > THRESHOLD
+            {
+                final double fraction = bindingsSize / maxBindingsToUseInEstimation;
+                final double estimationAsDouble = fraction * estimationSum;
+                final long estimation = Math.round(estimationAsDouble);
+                if ( estimation <= minimumTotal )
+                    estimatedTotal = minimumTotal;
+                else
+                    estimatedTotal = estimation;
+            }
         }
 
         final long estimatedValid = estimatedTotal;
@@ -363,12 +383,11 @@ public class HdtDataSource extends DataSource
         };
     }
 
-    private long estimateResultSetSize(List<Binding> bindings,
+    private long estimateResultSetSize(final Binding binding,
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, int subjectId, int predicateId,
-            int objectId, int positionInBindingsList)
+            int objectId)
     {
-        Binding binding = bindings.get(positionInBindingsList);
         final Iterator<Var> it = binding.vars();
         while (it.hasNext())
         {
@@ -405,7 +424,10 @@ public class HdtDataSource extends DataSource
         final IteratorTripleID matches = datasource.getTriples()
                 .search(new TripleID(subjectId, predicateId, objectId));
 
-        return matches.estimatedNumResults();
+        if ( matches.hasNext() )
+            return Math.max(matches.estimatedNumResults(), 1);
+        else
+            return 0L;
     }
 
     public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
