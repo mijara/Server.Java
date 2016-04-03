@@ -4,6 +4,7 @@ import org.apache.commons.cli.*;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.linkeddatafragments.servlet.CacheStatsTPFServlet;
 import org.linkeddatafragments.servlet.TriplePatternFragmentServlet;
 
 /**
@@ -55,6 +56,7 @@ public class JettyServer {
 
             // add the TriplePatternFragmentsServlet to the handler
             ServletHolder tpfServletHolder = new ServletHolder(new TriplePatternFragmentServlet());
+//            ServletHolder tpfServletHolder = new ServletHolder(new CacheStatsTPFServlet());
             tpfServletHolder.setInitParameter("configFile", config);
             handler.addServletWithMapping(tpfServletHolder, "/*");
 
