@@ -206,41 +206,23 @@ public class HdtDataSource extends DataSource
         int subjectId = 0;
         int predicateId = 0;
         int objectId = 0;
-        if (_subject.name.equals("Var"))
-        {
-            subjectId = 0;
-            // subjectId = dictionary.getIntID(((Var) _subject.object),
-            // TripleComponentRole.SUBJECT);
-        }
-        else
+        if ( ! _subject.isVar )
         {
             subjectId = _subject.object == null ? 0
-                    : dictionary.getIntID(((Resource) _subject.object).asNode(),
+                    : dictionary.getIntID(_subject.rdfNode,
                             TripleComponentRole.SUBJECT);
         }
-        if (_predicate.name.equals("Var"))
-        {
-            // predicateId = dictionary.getIntID(((Var) _predicate.object),
-            // TripleComponentRole.PREDICATE);
-            predicateId = 0;
-        }
-        else
+        if ( ! _predicate.isVar )
         {
             predicateId = _predicate == null ? 0
                     : dictionary.getIntID(
-                            ((RDFNode) _predicate.object).asNode(),
+                            _predicate.rdfNode,
                             TripleComponentRole.PREDICATE);
         }
-        if (_object.name.equals("Var"))
-        {
-            // objectId = dictionary.getIntID(((Var) _object.object),
-            // TripleComponentRole.OBJECT);
-            objectId = 0;
-        }
-        else
+        if ( ! _object.isVar )
         {
             objectId = _object.object == null ? 0
-                    : dictionary.getIntID(((RDFNode) _object.object).asNode(),
+                    : dictionary.getIntID(_object.rdfNode,
                             TripleComponentRole.OBJECT);
         }
         final Model triples = ModelFactory.createDefaultModel();
@@ -248,7 +230,6 @@ public class HdtDataSource extends DataSource
         int triplesAddedInCurrentPage = 0;
         boolean atOffset;
         int bindingsSize = bindings.size();
-        int tenPercentBindings = (int) (bindingsSize * (10.0f / 100.0f));
         int countBindingsSoFar = 0;
         for (Binding solmap : bindings)
         {
@@ -259,32 +240,29 @@ public class HdtDataSource extends DataSource
             while (it.hasNext())
             {
                 final Var var = it.next();
+                final String varName = var.getName();
                 if (bindingsSubjectId == 0)
                 {
-                    if (((Var) _subject.object).getName().equals(var.getName()))
+                    if ( varName.equals(_subject.varName) )
                     {
-                        int id = dictionary.getIntID(solmap.get(var),
+                        bindingsSubjectId = dictionary.getIntID(solmap.get(var),
                                 TripleComponentRole.SUBJECT);
-                        bindingsSubjectId = id;
                     }
                 }
                 if (bindinsgPredicateId == 0)
                 {
-                    if (((Var) _predicate.object).getName()
-                            .equals(var.getName()))
+                    if ( varName.equals(_predicate.varName) )
                     {
-                        int id = dictionary.getIntID(solmap.get(var),
+                        bindinsgPredicateId = dictionary.getIntID(solmap.get(var),
                                 TripleComponentRole.PREDICATE);
-                        bindinsgPredicateId = id;
                     }
                 }
                 if (bindingsObjectId == 0)
                 {
-                    if (((Var) _object.object).getName().equals(var.getName()))
+                    if ( varName.equals(_object.varName) )
                     {
-                        int id = dictionary.getIntID(solmap.get(var),
+                        bindingsObjectId = dictionary.getIntID(solmap.get(var),
                                 TripleComponentRole.OBJECT);
-                        bindingsObjectId = id;
                     }
                 }
             }
@@ -394,31 +372,29 @@ public class HdtDataSource extends DataSource
         while (it.hasNext())
         {
             final Var var = it.next();
-            if (_subject.name.equals("Var"))
+            final String varName = var.getName();
+            if ( _subject.isVar )
             {
-                if (((Var) _subject.object).getName().equals(var.getName()))
+                if ( varName.equals(_subject.varName) )
                 {
-                    int id = dictionary.getIntID(binding.get(var),
+                    subjectId = dictionary.getIntID(binding.get(var),
                             TripleComponentRole.SUBJECT);
-                    subjectId = id;
                 }
             }
-            if (_predicate.name.equals("Var"))
+            if ( _predicate.isVar )
             {
-                if (((Var) _predicate.object).getName().equals(var.getName()))
+                if ( varName.equals(_predicate.varName) )
                 {
-                    int id = dictionary.getIntID(binding.get(var),
+                    predicateId = dictionary.getIntID(binding.get(var),
                             TripleComponentRole.PREDICATE);
-                    predicateId = id;
                 }
             }
-            if (_object.name.equals("Var"))
+            if ( _object.isVar )
             {
-                if (((Var) _object.object).getName().equals(var.getName()))
+                if ( varName.equals(_object.varName) )
                 {
-                    int id = dictionary.getIntID(binding.get(var),
+                    objectId = dictionary.getIntID(binding.get(var),
                             TripleComponentRole.OBJECT);
-                    objectId = id;
                 }
             }
         }
