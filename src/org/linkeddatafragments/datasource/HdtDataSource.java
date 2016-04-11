@@ -321,10 +321,12 @@ public class HdtDataSource extends DataSource
         final long estimatedTotal;
         if (triplesAddedInCurrentPage < limit)
         {
-//            System.out.println(
-//                    "Triples in current page: " + triplesAddedInCurrentPage);
-            estimatedTotal = minimumTotal;
+            estimatedTotal = offset + triplesAddedInCurrentPage;
         }
+//         else // This else block is for testing purposes only. The next else block is the correct one.
+//         {
+//             estimatedTotal = minimumTotal;
+//         }
         else
         {
             final int THRESHOLD = 10;
