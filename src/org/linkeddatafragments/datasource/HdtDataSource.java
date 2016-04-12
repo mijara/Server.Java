@@ -206,23 +206,20 @@ public class HdtDataSource extends DataSource
         int subjectId = 0;
         int predicateId = 0;
         int objectId = 0;
-        if ( ! _subject.isVar )
+        if ( _subject.isNode )
         {
-            subjectId = _subject.object == null ? 0
-                    : dictionary.getIntID(_subject.rdfNode,
+            subjectId = dictionary.getIntID(_subject.rdfNode,
                             TripleComponentRole.SUBJECT);
         }
-        if ( ! _predicate.isVar )
+        if ( _predicate.isNode )
         {
-            predicateId = _predicate == null ? 0
-                    : dictionary.getIntID(
+            predicateId = dictionary.getIntID(
                             _predicate.rdfNode,
                             TripleComponentRole.PREDICATE);
         }
-        if ( ! _object.isVar )
+        if ( _object.isNode )
         {
-            objectId = _object.object == null ? 0
-                    : dictionary.getIntID(_object.rdfNode,
+            objectId = dictionary.getIntID(_object.rdfNode,
                             TripleComponentRole.OBJECT);
         }
         final Model triples = ModelFactory.createDefaultModel();
@@ -241,7 +238,7 @@ public class HdtDataSource extends DataSource
             {
                 final Var var = it.next();
                 final String varName = var.getName();
-                if (bindingsSubjectId == 0)
+                if ( _subject.isVar )
                 {
                     if ( varName.equals(_subject.varName) )
                     {
@@ -249,7 +246,7 @@ public class HdtDataSource extends DataSource
                                 TripleComponentRole.SUBJECT);
                     }
                 }
-                if (bindinsgPredicateId == 0)
+                if ( _predicate.isVar )
                 {
                     if ( varName.equals(_predicate.varName) )
                     {
@@ -257,7 +254,7 @@ public class HdtDataSource extends DataSource
                                 TripleComponentRole.PREDICATE);
                     }
                 }
-                if (bindingsObjectId == 0)
+                if ( _object.isVar )
                 {
                     if ( varName.equals(_object.varName) )
                     {

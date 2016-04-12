@@ -11,6 +11,7 @@ public class TripleElement
 
     public final boolean isVar;
     public final String varName;
+    public final boolean isNode;
     public final Node rdfNode;
 
     public TripleElement(String name, Object object)
@@ -18,19 +19,22 @@ public class TripleElement
         this.name = name;
         this.object = object;
 
-        if ( name.equals("Var") ) {
+        if ( name.equals("Var") || object instanceof Var ) {
             isVar = true;
             varName = ( (Var) object ).getName();
+            isNode = false;
             rdfNode = null;
         }
-        else if ( name.equals("RDFNode") ) {
+        else if ( name.equals("RDFNode") || object instanceof RDFNode ) {
             isVar = false;
             varName = null;
+            isNode = true;
             rdfNode = ( (RDFNode) object ).asNode();
         }
         else {
             isVar = false;
             varName = null;
+            isNode = false;
             rdfNode = null;
         }
     }
@@ -42,6 +46,7 @@ public class TripleElement
 
         isVar = true;
         varName = var.getName();
+        isNode = false;
         rdfNode = null;
     }
 
@@ -52,6 +57,7 @@ public class TripleElement
 
         isVar = false;
         varName = null;
+        isNode = true;
         rdfNode = node.asNode();
     }
 
