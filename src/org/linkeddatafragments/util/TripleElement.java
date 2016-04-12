@@ -35,4 +35,24 @@ public class TripleElement
         }
     }
 
+    public TripleElement( Var var )
+    {
+        this.name = "Var";
+        this.object = var;
+
+        isVar = true;
+        varName = var.getName();
+        rdfNode = null;
+    }
+
+    public TripleElement( RDFNode node )
+    {
+        this.name = "RDFNode";
+        this.object = node;
+
+        isVar = false;
+        varName = null;
+        rdfNode = node.asNode();
+    }
+
 }

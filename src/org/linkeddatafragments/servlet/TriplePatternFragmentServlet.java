@@ -436,13 +436,12 @@ e.printStackTrace( System.err );
         {
         // variable or blank node indicates an unknown
         case '?':
-            return new TripleElement("Var", Var.alloc(value.replaceAll("\\?",
-                    "")));
+            return new TripleElement(Var.alloc(value.replaceAll("\\?","")));
         case '_':
             return null;
             // angular brackets indicate a URI
         case '<':
-            return new TripleElement("RDFNode",
+            return new TripleElement(
                     ResourceFactory.createResource(value.substring(1,
                             value.length() - 1)));
             // quotes indicate a string
@@ -455,22 +454,22 @@ e.printStackTrace( System.err );
                 final String type = matcher.group(3);
                 if (lang != null)
                 {
-                    return new TripleElement("RDFNode",
+                    return new TripleElement(
                             ResourceFactory.createLangLiteral(body, lang));
                 }
                 if (type != null)
                 {
-                    return new TripleElement("RDFNode",
+                    return new TripleElement(
                             ResourceFactory.createTypedLiteral(body,
                                     types.getSafeTypeByName(type)));
                 }
-                return new TripleElement("RDFNode",
+                return new TripleElement(
                         ResourceFactory.createPlainLiteral(body));
             }
             return new TripleElement("Property", INVALID_URI);
             // assume it's a URI without angular brackets
         default:
-            return new TripleElement("RDFNode",
+            return new TripleElement(
                     ResourceFactory.createResource(value));
         }
     }
