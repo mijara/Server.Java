@@ -21,10 +21,13 @@ import static org.linkeddatafragments.util.CommonResources.VOID_DATASET;
 import static org.linkeddatafragments.util.CommonResources.VOID_SUBSET;
 import static org.linkeddatafragments.util.CommonResources.VOID_TRIPLES;
 
+import java.util.ArrayList;
 import java.io.File;
 import java.io.FileReader;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,6 +48,7 @@ import org.linkeddatafragments.util.TripleElement;
 import com.google.gson.JsonObject;
 import com.hp.hpl.jena.datatypes.TypeMapper;
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.rdf.model.Literal;
@@ -169,12 +173,11 @@ public class TriplePatternFragmentServlet extends HttpServlet
             String predicateString = request.getParameter("predicate");
             String objectString = request.getParameter("object");
 
-            // final Resource subject = parseAsResource(subjectString);
-            // final Property predicate = parseAsProperty(predicateString);
-            // final RDFNode object = parseAsNode(objectString);
-            final TripleElement subject = parseAsResource(subjectString);
-            final TripleElement predicate = parseAsProperty(predicateString);
-            final TripleElement object = parseAsNode(objectString);
+            final Map<String,Integer> variableIdMap = new HashMap<String,Integer> ();
+
+            final TripleElement subject = parseAsResource(subjectString, variableIdMap);
+            final TripleElement predicate = parseAsProperty(predicateString, variableIdMap);
+            final TripleElement object = parseAsNode(objectString, variableIdMap);
 
             final long page = Math.max(1,
                     parseAsInteger(request.getParameter("page")));
@@ -182,14 +185,14 @@ public class TriplePatternFragmentServlet extends HttpServlet
 
             // Olaf and Carlos work
             // **************
-            final List<Binding> bindings = parseAsSetOfBindings(request
-                    .getParameter("values"));
+            final List<Map<Integer,Node>> solutionMappings = parseAsListOfSolMaps(request
+                    .getParameter("values"), variableIdMap);
 
             TriplePatternFragment _fragment = null;
-            if (bindings != null)
+            if (solutionMappings != null)
             {
                 _fragment = dataSource.getBindingFragment(subject, predicate,
-                        object, offset, limit, bindings);
+                        object, offset, limit, solutionMappings);
             }
             else
             {
@@ -291,15 +294,41 @@ e.printStackTrace( System.err );
      *            containing the SPARQL bindings
      * @return a list with set of bindings
      */
-    public static List<Binding> parseAsSetOfBindings(String value)
+    public static List<Map<Integer,Node>> parseAsListOfSolMaps(String value, final Map<String,Integer> variableIdMap)
     {
         if (value == null)
         {
             return null;
         }
-        String newString = "select * where {} VALUES " + value;
-        Query q = QueryFactory.create(newString);
-        return q.getValuesData();
+
+        // Use the SPARQL parser of Jena ARQ to obtain a list of Jena Binding objects
+        final String newString = "select * where {} VALUES " + value;
+        final Query q = QueryFactory.create(newString);
+        final List<Binding> jenaBindings = q.getValuesData();
+
+        // Turn the list of Jena Binding objects into a list of id-based mappings
+        final List<Map<Integer,Node>> listOfSolMaps = new ArrayList<Map<Integer,Node>> ();
+        for ( Binding b : jenaBindings )
+        {
+            final Map<Integer,Node> solMap = new HashMap<Integer,Node> ();
+            listOfSolMaps.add( solMap );
+
+            final Iterator<Var> varIt = b.vars();
+            while ( varIt.hasNext() )
+            {
+                final Var v = varIt.next();
+                final String varName = v.getName();
+                Integer varId = variableIdMap.get(varName);
+                if ( varId == null ) {
+                    varId = Integer.valueOf( variableIdMap.size() );
+                    variableIdMap.put( varName, varId );
+                }
+
+                solMap.put( varId, b.get(v) );
+            }
+        }
+
+        return listOfSolMaps;
     }
 
     /**
@@ -362,9 +391,9 @@ e.printStackTrace( System.err );
      *            the value
      * @return the parsed value, or null if unspecified
      */
-    public static TripleElement parseAsResource(String value)
+    public static TripleElement parseAsResource(String value, final Map<String,Integer> variableIdMap)
     {
-        final TripleElement subject = parseAsNode(value);
+        final TripleElement subject = parseAsNode(value, variableIdMap);
         if (subject.object == null)
         {
             return new TripleElement("null", null);
@@ -385,10 +414,9 @@ e.printStackTrace( System.err );
      *            the value
      * @return the parsed value, or null if unspecified
      */
-    public static TripleElement parseAsProperty(String value)
+    public static TripleElement parseAsProperty(String value, final Map<String,Integer> variableIdMap)
     {
-        // final RDFNode predicateNode = parseAsNode(value);
-        final TripleElement predicateNode = parseAsNode(value);
+        final TripleElement predicateNode = parseAsNode(value, variableIdMap);
         if (predicateNode.object == null)
         {
             return new TripleElement("null", null);
@@ -423,7 +451,7 @@ e.printStackTrace( System.err );
      *            the value
      * @return the parsed value, or null if unspecified
      */
-    public static TripleElement parseAsNode(String value)
+    public static TripleElement parseAsNode(String value, final Map<String,Integer> variableIdMap)
     {
         // nothing or empty indicates an unknown
         if (value == null || value.length() == 0)
@@ -436,7 +464,13 @@ e.printStackTrace( System.err );
         {
         // variable or blank node indicates an unknown
         case '?':
-            return new TripleElement(Var.alloc(value.replaceAll("\\?","")));
+            final String varName = value.replaceAll("\\?","");
+            Integer varId = variableIdMap.get(varName);
+            if ( varId == null ) {
+                varId = Integer.valueOf( variableIdMap.size() );
+                variableIdMap.put( varName, varId );
+            }
+            return new TripleElement( varName, varId.intValue() );
         case '_':
             return null;
             // angular brackets indicate a URI

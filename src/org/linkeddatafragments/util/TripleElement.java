@@ -11,6 +11,8 @@ public class TripleElement
 
     public final boolean isVar;
     public final String varName;
+    public final int varId;
+
     public final boolean isNode;
     public final Node rdfNode;
 
@@ -19,33 +21,32 @@ public class TripleElement
         this.name = name;
         this.object = object;
 
+        isVar = false;
+        varName = null;
+        varId = -1;
+
         if ( name.equals("Var") || object instanceof Var ) {
-            isVar = true;
-            varName = ( (Var) object ).getName();
-            isNode = false;
-            rdfNode = null;
+            throw new UnsupportedOperationException();
         }
         else if ( name.equals("RDFNode") || object instanceof RDFNode ) {
-            isVar = false;
-            varName = null;
             isNode = true;
             rdfNode = ( (RDFNode) object ).asNode();
         }
         else {
-            isVar = false;
-            varName = null;
             isNode = false;
             rdfNode = null;
         }
     }
 
-    public TripleElement( Var var )
+    public TripleElement( final String varName, final int varId )
     {
         this.name = "Var";
-        this.object = var;
+        this.object = Var.alloc( varName );
 
         isVar = true;
-        varName = var.getName();
+        this.varName = varName;
+        this.varId = varId;
+
         isNode = false;
         rdfNode = null;
     }
@@ -57,6 +58,8 @@ public class TripleElement
 
         isVar = false;
         varName = null;
+        varId = -1;
+
         isNode = true;
         rdfNode = node.asNode();
     }

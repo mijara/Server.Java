@@ -15,6 +15,7 @@ import org.rdfhdt.hdt.triples.IteratorTripleID;
 import org.rdfhdt.hdt.triples.TripleID;
 import org.rdfhdt.hdtjena.NodeDictionary;
 
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -22,7 +23,6 @@ import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.sparql.core.Var;
-import com.hp.hpl.jena.sparql.engine.binding.Binding;
 
 /**
  * An HDT data source of Basic Linked Data Fragments.
@@ -183,17 +183,58 @@ public class HdtDataSource extends DataSource
     public TriplePatternFragment getBindingFragment(
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, final long offset, final long limit,
-            final List<Binding> bindings)
+            final List<Map<Integer,Node>> solutionMappings)
     {
+        // Translate the given Node objects based 'solutionMappings' into Maps
+        // that map to the HDT identifiers of the Node objects. Doing this
+        // translation upfront is an optimization because it avoids repeating
+        // the same HDT dictionary lookups over and over again.
+        final List<Map<Integer, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Integer, Integer>>();
+        for ( Map<Integer,Node> solmap : solutionMappings )
+        {
+            final Map<Integer, Integer> solmapWithHdtIDs = new HashMap<Integer, Integer>();
+            for ( Map.Entry<Integer,Node> binding : solmap.entrySet() )
+            {
+                final Node n = binding.getValue();
+
+                int id = dictionary.getIntID(n,
+                        TripleComponentRole.SUBJECT);
+
+                final int idP = dictionary.getIntID(n,
+                        TripleComponentRole.PREDICATE);
+                if (idP != -1)
+                {
+                    if (id != -1 && id != idP)
+                        throw new IllegalStateException();
+
+                    id = idP;
+                }
+
+                final int idO = dictionary.getIntID(n,
+                        TripleComponentRole.OBJECT);
+                if (idO != -1)
+                {
+                    if (id != -1 && id != idO)
+                        throw new IllegalStateException();
+
+                    id = idO;
+                }
+
+                solmapWithHdtIDs.put( binding.getKey(), id );
+            }
+
+            solmapsWithHdtIDs.add(solmapWithHdtIDs);
+        }
+
         return getBindingFragmentByTriplePatternSubstitution(
                 // return getBindingFragmentByTestingHdtMatches(
-                _subject, _predicate, _object, offset, limit, bindings);
+                _subject, _predicate, _object, offset, limit, solmapsWithHdtIDs);
     }
 
     public TriplePatternFragment getBindingFragmentByTriplePatternSubstitution(
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, final long offset, final long limit,
-            final List<Binding> bindings)
+            final List<Map<Integer,Integer>> solutionMappings)
     {
         // Translate the given Jena Binding objects into Maps that map
         // variables (Jena Var objects) to the HDT identifiers of the
@@ -226,41 +267,33 @@ public class HdtDataSource extends DataSource
         int triplesCheckedSoFar = 0;
         int triplesAddedInCurrentPage = 0;
         boolean atOffset;
-        int bindingsSize = bindings.size();
+        int bindingsSize = solutionMappings.size();
         int countBindingsSoFar = 0;
-        for (Binding solmap : bindings)
+        for ( Map<Integer,Integer> solmap : solutionMappings )
         {
             int bindingsSubjectId = subjectId;
             int bindinsgPredicateId = predicateId;
             int bindingsObjectId = objectId;
-            final Iterator<Var> it = solmap.vars();
-            while (it.hasNext())
+
+            if ( _subject.isVar )
             {
-                final Var var = it.next();
-                final String varName = var.getName();
-                if ( _subject.isVar )
-                {
-                    if ( varName.equals(_subject.varName) )
-                    {
-                        bindingsSubjectId = dictionary.getIntID(solmap.get(var),
-                                TripleComponentRole.SUBJECT);
-                    }
+                final Integer id = solmap.get( _subject.varId );
+                if ( id != null ) {
+                    bindingsSubjectId = id;
                 }
-                if ( _predicate.isVar )
-                {
-                    if ( varName.equals(_predicate.varName) )
-                    {
-                        bindinsgPredicateId = dictionary.getIntID(solmap.get(var),
-                                TripleComponentRole.PREDICATE);
-                    }
+            }
+            if ( _predicate.isVar )
+            {
+                final Integer id = solmap.get( _predicate.varId );
+                if ( id != null ) {
+                    bindinsgPredicateId = id;
                 }
-                if ( _object.isVar )
-                {
-                    if ( varName.equals(_object.varName) )
-                    {
-                        bindingsObjectId = dictionary.getIntID(solmap.get(var),
-                                TripleComponentRole.OBJECT);
-                    }
+            }
+            if ( _object.isVar )
+            {
+                final Integer id = solmap.get( _object.varId );
+                if ( id != null ) {
+                    bindingsObjectId = id;
                 }
             }
 
@@ -317,7 +350,7 @@ public class HdtDataSource extends DataSource
             for (int i = 0; i < maxBindingsToUseInEstimation; i++)
             {
                 estimationSum += estimateResultSetSize(
-                        bindings.get(i), _subject, _predicate, _object, subjectId,
+                        solutionMappings.get(i), _subject, _predicate, _object, subjectId,
                         predicateId, objectId);
             }
 
@@ -360,39 +393,30 @@ public class HdtDataSource extends DataSource
         };
     }
 
-    private long estimateResultSetSize(final Binding binding,
+    private long estimateResultSetSize(final Map<Integer,Integer> solmap,
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, int subjectId, int predicateId,
             int objectId)
     {
-        final Iterator<Var> it = binding.vars();
-        while (it.hasNext())
+        if ( _subject.isVar )
         {
-            final Var var = it.next();
-            final String varName = var.getName();
-            if ( _subject.isVar )
-            {
-                if ( varName.equals(_subject.varName) )
-                {
-                    subjectId = dictionary.getIntID(binding.get(var),
-                            TripleComponentRole.SUBJECT);
-                }
+            final Integer id = solmap.get( _subject.varId );
+            if ( id != null ) {
+                subjectId = id;
             }
-            if ( _predicate.isVar )
-            {
-                if ( varName.equals(_predicate.varName) )
-                {
-                    predicateId = dictionary.getIntID(binding.get(var),
-                            TripleComponentRole.PREDICATE);
-                }
+        }
+        if ( _predicate.isVar )
+        {
+            final Integer id = solmap.get( _predicate.varId );
+            if ( id != null ) {
+                predicateId = id;
             }
-            if ( _object.isVar )
-            {
-                if ( varName.equals(_object.varName) )
-                {
-                    objectId = dictionary.getIntID(binding.get(var),
-                            TripleComponentRole.OBJECT);
-                }
+        }
+        if ( _object.isVar )
+        {
+            final Integer id = solmap.get( _object.varId );
+            if ( id != null ) {
+                objectId = id;
             }
         }
 
@@ -405,59 +429,59 @@ public class HdtDataSource extends DataSource
             return 0L;
     }
 
-    public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
-            final TripleElement _subject, final TripleElement _predicate,
-            final TripleElement _object, final long offset, final long limit,
-            final List<Binding> bindings)
-    {
-        // Translate the given Jena Binding objects into Maps that map
-        // variables (Jena Var objects) to the HDT identifiers of the
-        // corresponding RDF terms (Jena Node objects) that the Binding
-        // objects bind to the variables.
-        // Doing this translation upfront is an optimization because it
-        // avoids repeating the same HDT dictionary lookups over and over
-        // again.
-        final List<Map<Var, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var, Integer>>();
-        for (Binding solmap : bindings)
-        {
-            final Map<Var, Integer> solmapWithHdtIDs = new HashMap<Var, Integer>();
-            final Iterator<Var> it = solmap.vars();
-            while (it.hasNext())
-            {
-                final Var var = it.next();
-
-                int id = dictionary.getIntID(solmap.get(var),
-                        TripleComponentRole.SUBJECT);
-
-                final int idP = dictionary.getIntID(solmap.get(var),
-                        TripleComponentRole.PREDICATE);
-                if (idP != -1)
-                {
-                    if (id != -1 && id != idP)
-                        throw new IllegalStateException();
-
-                    id = idP;
-                }
-
-                final int idO = dictionary.getIntID(solmap.get(var),
-                        TripleComponentRole.OBJECT);
-                if (idO != -1)
-                {
-                    if (id != -1 && id != idO)
-                        throw new IllegalStateException();
-
-                    id = idO;
-                }
-
-                solmapWithHdtIDs.put(var, id);
-            }
-
-            solmapsWithHdtIDs.add(solmapWithHdtIDs);
-        }
-
-        return getBindingFragmentInHDT(_subject, _predicate, _object, offset,
-                limit, solmapsWithHdtIDs);
-    }
+//     public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
+//             final TripleElement _subject, final TripleElement _predicate,
+//             final TripleElement _object, final long offset, final long limit,
+//             final List<Binding> bindings)
+//     {
+//         // Translate the given Jena Binding objects into Maps that map
+//         // variables (Jena Var objects) to the HDT identifiers of the
+//         // corresponding RDF terms (Jena Node objects) that the Binding
+//         // objects bind to the variables.
+//         // Doing this translation upfront is an optimization because it
+//         // avoids repeating the same HDT dictionary lookups over and over
+//         // again.
+//         final List<Map<Var, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var, Integer>>();
+//         for (Binding solmap : bindings)
+//         {
+//             final Map<Var, Integer> solmapWithHdtIDs = new HashMap<Var, Integer>();
+//             final Iterator<Var> it = solmap.vars();
+//             while (it.hasNext())
+//             {
+//                 final Var var = it.next();
+// 
+//                 int id = dictionary.getIntID(solmap.get(var),
+//                         TripleComponentRole.SUBJECT);
+// 
+//                 final int idP = dictionary.getIntID(solmap.get(var),
+//                         TripleComponentRole.PREDICATE);
+//                 if (idP != -1)
+//                 {
+//                     if (id != -1 && id != idP)
+//                         throw new IllegalStateException();
+// 
+//                     id = idP;
+//                 }
+// 
+//                 final int idO = dictionary.getIntID(solmap.get(var),
+//                         TripleComponentRole.OBJECT);
+//                 if (idO != -1)
+//                 {
+//                     if (id != -1 && id != idO)
+//                         throw new IllegalStateException();
+// 
+//                     id = idO;
+//                 }
+// 
+//                 solmapWithHdtIDs.put(var, id);
+//             }
+// 
+//             solmapsWithHdtIDs.add(solmapWithHdtIDs);
+//         }
+// 
+//         return getBindingFragmentInHDT(_subject, _predicate, _object, offset,
+//                 limit, solmapsWithHdtIDs);
+//     }
 
     public TriplePatternFragment getBindingFragmentInHDT(
             final TripleElement _subject, final TripleElement _predicate,
