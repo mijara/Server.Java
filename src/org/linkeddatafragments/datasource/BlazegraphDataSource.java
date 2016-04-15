@@ -7,11 +7,9 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -20,6 +18,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.sparql.core.Var;
+import com.hp.hpl.jena.sparql.engine.binding.Binding;
 
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -271,10 +270,11 @@ cxn.add( reader, baseURL, RDFFormat.TURTLE );
                                         final TripleElement object,
                                         final long offset,
                                         final long limit,
-                                        final List<Map<Integer,Node>> solMaps )
+                                        final List<Binding> solMaps,
+                                        final List<Var> foundVariables )
     {
         return getBindingsRestrictedTPF( subject, predicate, object,
-                                         solMaps,
+                                         solMaps, foundVariables,
                                          offset, limit );
     }
 
@@ -282,7 +282,8 @@ cxn.add( reader, baseURL, RDFFormat.TURTLE );
                                            final TripleElement subject,
                                            final TripleElement predicate,
                                            final TripleElement object,
-                                           final List<Map<Integer,Node>> solMaps,
+                                           final List<Binding> solMaps,
+                                           final List<Var> foundVariables,
                                            final long offset,
                                            final long limit )
     {

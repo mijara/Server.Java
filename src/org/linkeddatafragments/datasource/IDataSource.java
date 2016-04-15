@@ -2,11 +2,11 @@ package org.linkeddatafragments.datasource;
 
 import java.io.Closeable;
 import java.util.List;
-import java.util.Map;
 
 import org.linkeddatafragments.util.TripleElement;
 
-import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.sparql.core.Var;
+import com.hp.hpl.jena.sparql.engine.binding.Binding;
 
 /**
  * A data source of Basic Linked Data Fragments.
@@ -29,5 +29,5 @@ public interface IDataSource extends Closeable {
         public String getDescription();
         
         public TriplePatternFragment getBindingFragment(TripleElement subject, TripleElement predicate, TripleElement object,
-                long offset, long limit, List<Map<Integer,Node>> listOfSolMaps);
+                long offset, long limit, List<Binding> bindings, List<Var> foundVariables);
 }

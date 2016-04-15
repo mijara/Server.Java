@@ -1,11 +1,13 @@
 package org.linkeddatafragments.datasource;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.linkeddatafragments.util.TripleElement;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
@@ -23,6 +25,7 @@ import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.sparql.core.Var;
+import com.hp.hpl.jena.sparql.engine.binding.Binding;
 
 /**
  * An HDT data source of Basic Linked Data Fragments.
@@ -183,123 +186,31 @@ public class HdtDataSource extends DataSource
     public TriplePatternFragment getBindingFragment(
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, final long offset, final long limit,
-            final List<Map<Integer,Node>> solutionMappings)
+            final List<Binding> bindings, final List<Var> foundVariables)
     {
-        // Translate the given Node objects based 'solutionMappings' into Maps
-        // that map to the HDT identifiers of the Node objects. Doing this
-        // translation upfront is an optimization because it avoids repeating
-        // the same HDT dictionary lookups over and over again.
-        final List<Map<Integer, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Integer, Integer>>();
-        for ( Map<Integer,Node> solmap : solutionMappings )
-        {
-            final Map<Integer, Integer> solmapWithHdtIDs = new HashMap<Integer, Integer>();
-            for ( Map.Entry<Integer,Node> binding : solmap.entrySet() )
-            {
-                final Node n = binding.getValue();
-
-                int id = dictionary.getIntID(n,
-                        TripleComponentRole.SUBJECT);
-
-                final int idP = dictionary.getIntID(n,
-                        TripleComponentRole.PREDICATE);
-                if (idP != -1)
-                {
-                    if (id != -1 && id != idP)
-                        throw new IllegalStateException();
-
-                    id = idP;
-                }
-
-                final int idO = dictionary.getIntID(n,
-                        TripleComponentRole.OBJECT);
-                if (idO != -1)
-                {
-                    if (id != -1 && id != idO)
-                        throw new IllegalStateException();
-
-                    id = idO;
-                }
-
-                solmapWithHdtIDs.put( binding.getKey(), id );
-            }
-
-            solmapsWithHdtIDs.add(solmapWithHdtIDs);
-        }
-
         return getBindingFragmentByTriplePatternSubstitution(
                 // return getBindingFragmentByTestingHdtMatches(
-                _subject, _predicate, _object, offset, limit, solmapsWithHdtIDs);
+                _subject, _predicate, _object, offset, limit, bindings, foundVariables);
     }
 
     public TriplePatternFragment getBindingFragmentByTriplePatternSubstitution(
             final TripleElement _subject, final TripleElement _predicate,
             final TripleElement _object, final long offset, final long limit,
-            final List<Map<Integer,Integer>> solutionMappings)
+            final List<Binding> bindings, final List<Var> foundVariables)
     {
-        // Translate the given Jena Binding objects into Maps that map
-        // variables (Jena Var objects) to the HDT identifiers of the
-        // corresponding RDF terms (Jena Node objects) that the Binding
-        // objects bind to the variables.
-        // Doing this translation upfront is an optimization because it
-        // avoids repeating the same HDT dictionary lookups over and over
-        // again.
-        // look up the result from the HDT datasource
-        int subjectId = 0;
-        int predicateId = 0;
-        int objectId = 0;
-        if ( _subject.isNode )
-        {
-            subjectId = dictionary.getIntID(_subject.rdfNode,
-                            TripleComponentRole.SUBJECT);
-        }
-        if ( _predicate.isNode )
-        {
-            predicateId = dictionary.getIntID(
-                            _predicate.rdfNode,
-                            TripleComponentRole.PREDICATE);
-        }
-        if ( _object.isNode )
-        {
-            objectId = dictionary.getIntID(_object.rdfNode,
-                            TripleComponentRole.OBJECT);
-        }
+        final TripleIDCachingIterator it = new TripleIDCachingIterator(
+                                     bindings, foundVariables,
+                                     _subject, _predicate, _object );
+
         final Model triples = ModelFactory.createDefaultModel();
         int triplesCheckedSoFar = 0;
         int triplesAddedInCurrentPage = 0;
         boolean atOffset;
-        int bindingsSize = solutionMappings.size();
         int countBindingsSoFar = 0;
-        for ( Map<Integer,Integer> solmap : solutionMappings )
+        while ( it.hasNext() )
         {
-            int bindingsSubjectId = subjectId;
-            int bindinsgPredicateId = predicateId;
-            int bindingsObjectId = objectId;
-
-            if ( _subject.isVar )
-            {
-                final Integer id = solmap.get( _subject.varId );
-                if ( id != null ) {
-                    bindingsSubjectId = id;
-                }
-            }
-            if ( _predicate.isVar )
-            {
-                final Integer id = solmap.get( _predicate.varId );
-                if ( id != null ) {
-                    bindinsgPredicateId = id;
-                }
-            }
-            if ( _object.isVar )
-            {
-                final Integer id = solmap.get( _object.varId );
-                if ( id != null ) {
-                    bindingsObjectId = id;
-                }
-            }
-
-            final IteratorTripleID matches = datasource.getTriples()
-                    .search(new TripleID(bindingsSubjectId, bindinsgPredicateId,
-                            bindingsObjectId));
+            final TripleID t = it.next();
+            final IteratorTripleID matches = datasource.getTriples().search(t);
             final boolean hasMatches = matches.hasNext();
             if (hasMatches)
             {
@@ -325,6 +236,7 @@ public class HdtDataSource extends DataSource
             countBindingsSoFar++;
         }
 
+        final int bindingsSize = bindings.size();
         final long minimumTotal = offset + triplesAddedInCurrentPage + 1;
         final long estimatedTotal;
         if (triplesAddedInCurrentPage < limit)
@@ -347,11 +259,12 @@ public class HdtDataSource extends DataSource
             }
 
             long estimationSum = 0L;
-            for (int i = 0; i < maxBindingsToUseInEstimation; i++)
+            it.reset();
+            int i = 0;
+            while ( it.hasNext() && i < maxBindingsToUseInEstimation )
             {
-                estimationSum += estimateResultSetSize(
-                        solutionMappings.get(i), _subject, _predicate, _object, subjectId,
-                        predicateId, objectId);
+                i++;
+                estimationSum += estimateResultSetSize( it.next() );
             }
 
             if (bindingsSize <= THRESHOLD)
@@ -393,95 +306,69 @@ public class HdtDataSource extends DataSource
         };
     }
 
-    private long estimateResultSetSize(final Map<Integer,Integer> solmap,
-            final TripleElement _subject, final TripleElement _predicate,
-            final TripleElement _object, int subjectId, int predicateId,
-            int objectId)
+    protected long estimateResultSetSize( final TripleID t )
     {
-        if ( _subject.isVar )
-        {
-            final Integer id = solmap.get( _subject.varId );
-            if ( id != null ) {
-                subjectId = id;
-            }
-        }
-        if ( _predicate.isVar )
-        {
-            final Integer id = solmap.get( _predicate.varId );
-            if ( id != null ) {
-                predicateId = id;
-            }
-        }
-        if ( _object.isVar )
-        {
-            final Integer id = solmap.get( _object.varId );
-            if ( id != null ) {
-                objectId = id;
-            }
-        }
-
-        final IteratorTripleID matches = datasource.getTriples()
-                .search(new TripleID(subjectId, predicateId, objectId));
+        final IteratorTripleID matches = datasource.getTriples().search(t);
 
         if ( matches.hasNext() )
-            return Math.max(matches.estimatedNumResults(), 1);
+            return Math.max( matches.estimatedNumResults(), 1L );
         else
             return 0L;
     }
 
-//     public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
-//             final TripleElement _subject, final TripleElement _predicate,
-//             final TripleElement _object, final long offset, final long limit,
-//             final List<Binding> bindings)
-//     {
-//         // Translate the given Jena Binding objects into Maps that map
-//         // variables (Jena Var objects) to the HDT identifiers of the
-//         // corresponding RDF terms (Jena Node objects) that the Binding
-//         // objects bind to the variables.
-//         // Doing this translation upfront is an optimization because it
-//         // avoids repeating the same HDT dictionary lookups over and over
-//         // again.
-//         final List<Map<Var, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var, Integer>>();
-//         for (Binding solmap : bindings)
-//         {
-//             final Map<Var, Integer> solmapWithHdtIDs = new HashMap<Var, Integer>();
-//             final Iterator<Var> it = solmap.vars();
-//             while (it.hasNext())
-//             {
-//                 final Var var = it.next();
-// 
-//                 int id = dictionary.getIntID(solmap.get(var),
-//                         TripleComponentRole.SUBJECT);
-// 
-//                 final int idP = dictionary.getIntID(solmap.get(var),
-//                         TripleComponentRole.PREDICATE);
-//                 if (idP != -1)
-//                 {
-//                     if (id != -1 && id != idP)
-//                         throw new IllegalStateException();
-// 
-//                     id = idP;
-//                 }
-// 
-//                 final int idO = dictionary.getIntID(solmap.get(var),
-//                         TripleComponentRole.OBJECT);
-//                 if (idO != -1)
-//                 {
-//                     if (id != -1 && id != idO)
-//                         throw new IllegalStateException();
-// 
-//                     id = idO;
-//                 }
-// 
-//                 solmapWithHdtIDs.put(var, id);
-//             }
-// 
-//             solmapsWithHdtIDs.add(solmapWithHdtIDs);
-//         }
-// 
-//         return getBindingFragmentInHDT(_subject, _predicate, _object, offset,
-//                 limit, solmapsWithHdtIDs);
-//     }
+    public TriplePatternFragment getBindingFragmentByTestingHdtMatches(
+            final TripleElement _subject, final TripleElement _predicate,
+            final TripleElement _object, final long offset, final long limit,
+            final List<Binding> bindings, final List<Var> foundVariables)
+    {
+        // Translate the given Jena Binding objects into Maps that map
+        // variables (Jena Var objects) to the HDT identifiers of the
+        // corresponding RDF terms (Jena Node objects) that the Binding
+        // objects bind to the variables.
+        // Doing this translation upfront is an optimization because it
+        // avoids repeating the same HDT dictionary lookups over and over
+        // again.
+        final List<Map<Var, Integer>> solmapsWithHdtIDs = new LinkedList<Map<Var, Integer>>();
+        for (Binding solmap : bindings)
+        {
+            final Map<Var, Integer> solmapWithHdtIDs = new HashMap<Var, Integer>();
+            final Iterator<Var> it = solmap.vars();
+            while (it.hasNext())
+            {
+                final Var var = it.next();
+
+                int id = dictionary.getIntID(solmap.get(var),
+                        TripleComponentRole.SUBJECT);
+
+                final int idP = dictionary.getIntID(solmap.get(var),
+                        TripleComponentRole.PREDICATE);
+                if (idP != -1)
+                {
+                    if (id != -1 && id != idP)
+                        throw new IllegalStateException();
+
+                    id = idP;
+                }
+
+                final int idO = dictionary.getIntID(solmap.get(var),
+                        TripleComponentRole.OBJECT);
+                if (idO != -1)
+                {
+                    if (id != -1 && id != idO)
+                        throw new IllegalStateException();
+
+                    id = idO;
+                }
+
+                solmapWithHdtIDs.put(var, id);
+            }
+
+            solmapsWithHdtIDs.add(solmapWithHdtIDs);
+        }
+
+        return getBindingFragmentInHDT(_subject, _predicate, _object, offset,
+                limit, solmapsWithHdtIDs);
+    }
 
     public TriplePatternFragment getBindingFragmentInHDT(
             final TripleElement _subject, final TripleElement _predicate,
@@ -715,4 +602,272 @@ public class HdtDataSource extends DataSource
 
         return true;
     }
+
+    protected class TripleIDProducingIterator implements Iterator<TripleID>
+    {
+        protected final boolean sIsVar, pIsVar, oIsVar;
+        protected final boolean canHaveMatches;
+
+        protected final List<Node> sBindings = new ArrayList<Node> ();
+        protected final List<List<Node>> pBindings = new ArrayList<List<Node>> ();
+        protected final List<List<List<Node>>> oBindings = new ArrayList<List<List<Node>>> ();
+
+        protected int curSubjID, curPredID, curObjID;
+        protected int curSubjIdx, curPredIdx, curObjIdx;
+        protected List<Node> curPredBindings;
+        protected List<Node> curObjBindings;
+        protected boolean ready;
+
+        public TripleIDProducingIterator( final List<Binding> jenaSolMaps,
+                                          final List<Var> foundVariables,
+                                          final TripleElement subjectOfTP,
+                                          final TripleElement predicateOfTP,
+                                          final TripleElement objectOfTP )
+        {
+            int numOfVarsCoveredBySolMaps = 0;
+
+            if ( subjectOfTP.var != null )
+            {
+                this.sIsVar = true;
+                if ( foundVariables.contains(subjectOfTP.var) )
+                    numOfVarsCoveredBySolMaps++;
+            }
+            else
+                this.sIsVar = false;
+
+            if ( predicateOfTP.var != null )
+            {
+                this.pIsVar = true;
+                if ( foundVariables.contains(predicateOfTP.var) )
+                    numOfVarsCoveredBySolMaps++;
+            }
+            else
+                this.pIsVar = false;
+
+            if ( objectOfTP.var != null )
+            {
+                this.oIsVar = true;
+                if ( foundVariables.contains(objectOfTP.var) )
+                    numOfVarsCoveredBySolMaps++;
+            }
+            else
+                this.oIsVar = false;
+
+            final boolean needToCheckForDuplicates = ( numOfVarsCoveredBySolMaps < foundVariables.size() );
+
+            curSubjID = ( subjectOfTP.node == null ) ?
+                            0 :
+                            dictionary.getIntID( subjectOfTP.node,
+                                                 TripleComponentRole.SUBJECT );
+
+            curPredID = ( predicateOfTP.node == null ) ?
+                            0 :
+                            dictionary.getIntID( predicateOfTP.node,
+                                                 TripleComponentRole.PREDICATE );
+
+            curObjID = ( objectOfTP.node == null ) ?
+                            0 :
+                            dictionary.getIntID( objectOfTP.node,
+                                                 TripleComponentRole.OBJECT );
+
+            canHaveMatches = ( curSubjID >= 0 ) && ( curPredID >= 0 ) && ( curObjID >= 0 );
+
+            if ( canHaveMatches )
+            {
+                for ( Binding solMap : jenaSolMaps )
+                {
+                    final Node s = sIsVar ? solMap.get(subjectOfTP.var) : null;
+                    final Node p = pIsVar ? solMap.get(predicateOfTP.var) : null;
+                    final Node o = oIsVar ? solMap.get(objectOfTP.var) :null;
+
+                    final List<Node> pBindingsForS;
+                    final List<List<Node>> oBindingsForS;
+                    int sIdx;
+                    if (    ! needToCheckForDuplicates
+                         || (sIdx = sBindings.indexOf(s)) == -1 )
+                    {
+                        sBindings.add( s );
+
+                        pBindingsForS = new ArrayList<Node> ();
+                        pBindings.add( pBindingsForS );
+
+                        oBindingsForS = new ArrayList<List<Node>> ();
+                        oBindings.add( oBindingsForS );
+                    }
+                    else
+                    {
+                        pBindingsForS = pBindings.get( sIdx );
+                        oBindingsForS = oBindings.get( sIdx );
+                    }
+
+                    final List<Node> oBindingsForSP;
+                    int pIdx;
+                    if (    ! needToCheckForDuplicates
+                         || (pIdx = pBindingsForS.indexOf(p)) == -1 )
+                    {
+                        pBindingsForS.add( p );
+
+                        oBindingsForSP = new ArrayList<Node> ();
+                        oBindingsForS.add( oBindingsForSP );
+                    }
+                    else
+                    {
+                        oBindingsForSP = oBindingsForS.get( pIdx );
+                    }
+
+                    int oIdx;
+                    if (    ! needToCheckForDuplicates
+                         || (pIdx = oBindingsForSP.indexOf(o)) == -1 )
+                    {
+                        oBindingsForSP.add( o );
+                    }
+                }
+            }
+
+            reset();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            if ( ready )
+                return true;
+
+            if ( ! canHaveMatches )
+                return false;
+
+            do {
+                int prevSubjIdx = curSubjIdx;
+                int prevPredIdx = curPredIdx;
+
+                curObjIdx++;
+
+                while ( curPredID == -1 || curObjIdx >= curObjBindings.size() )
+                {
+                    curPredIdx++;
+                    while ( curSubjID == -1 || curPredIdx >= curPredBindings.size() )
+                    {
+                        curSubjIdx++;
+                        if ( curSubjIdx >= sBindings.size() )
+                        {
+                            return false;
+                        }
+
+                        curPredBindings = pBindings.get( curSubjIdx );
+                        curPredIdx = 0;
+
+                        if ( sIsVar )
+                            curSubjID = dictionary.getIntID( sBindings.get(curSubjIdx),
+                                                             TripleComponentRole.SUBJECT );
+                    }
+
+                    curObjBindings = oBindings.get( curSubjIdx ).get( curPredIdx );
+                    curObjIdx = 0;
+
+                    if ( pIsVar )
+                        curPredID = dictionary.getIntID( curPredBindings.get(curPredIdx),
+                                                         TripleComponentRole.PREDICATE );
+                }
+
+                if ( oIsVar )
+                    curObjID = dictionary.getIntID( curObjBindings.get(curObjIdx),
+                                                    TripleComponentRole.OBJECT );
+            }
+            while ( curSubjID == -1 || curPredID == -1 || curObjID == -1 );
+
+            ready = true;
+            return true;
+        }
+
+        @Override
+        public TripleID next()
+        {
+            if ( ! hasNext() )
+                throw new NoSuchElementException();
+
+            ready = false;
+            return new TripleID( curSubjID, curPredID, curObjID );
+        }
+
+        public void reset()
+        {
+            ready = canHaveMatches;
+
+            if ( canHaveMatches )
+            {
+                curSubjIdx = curPredIdx = curObjIdx = 0;
+
+                curPredBindings = pBindings.get( curSubjIdx );
+                curObjBindings = oBindings.get( curSubjIdx ).get( curPredIdx );
+
+                if ( sIsVar )
+                    curSubjID = dictionary.getIntID( sBindings.get(curSubjIdx),
+                                                     TripleComponentRole.SUBJECT );
+
+                if ( pIsVar )
+                    curPredID = dictionary.getIntID( curPredBindings.get(curPredIdx),
+                                                     TripleComponentRole.PREDICATE );
+
+                if ( oIsVar )
+                    curObjID = dictionary.getIntID( curObjBindings.get(curObjIdx),
+                                                    TripleComponentRole.OBJECT );
+            }
+        }
+
+    } // end of TripleIDProducingIterator
+
+    protected class TripleIDCachingIterator implements Iterator<TripleID>
+    {
+        protected final TripleIDProducingIterator it;
+        protected final List<TripleID> cache = new ArrayList<TripleID> ();
+
+        protected boolean replayMode = false;
+        protected int replayIdx = 0;
+
+        public TripleIDCachingIterator( final List<Binding> jenaSolMaps,
+                                        final List<Var> foundVariables,
+                                        final TripleElement subjectOfTP,
+                                        final TripleElement predicateOfTP,
+                                        final TripleElement objectOfTP )
+        {
+            it = new TripleIDProducingIterator( jenaSolMaps,
+                                                foundVariables,
+                                                subjectOfTP,
+                                                predicateOfTP,
+                                                objectOfTP );
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            if ( replayMode && replayIdx < cache.size() )
+                return true;
+
+            replayMode = false;
+            return it.hasNext();
+        }
+
+        @Override
+        public TripleID next()
+        {
+            if ( ! hasNext() )
+                throw new NoSuchElementException();
+
+            if ( replayMode ) {
+                return cache.get( replayIdx++ );
+            }
+
+            final TripleID t = it.next();
+            cache.add( t );
+            return t;
+        }
+
+        public void reset()
+        {
+            replayMode = true;
+            replayIdx = 0;
+        }
+
+    } // end of TripleIDCachingIterator
+
 }
