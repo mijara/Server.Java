@@ -1,7 +1,7 @@
 package org.linkeddatafragments.servlet;
 
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.servlet.ServletConfig;
@@ -17,8 +17,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class CacheStatsTPFServlet extends TriplePatternFragmentServlet 
 {
-    protected final static Set<String> cache = new TreeSet<String> ();
-    protected static AtomicLong requestsCounter = new AtomicLong( 0L );
+    private static AtomicLong requestsCounter = new AtomicLong( 0L );
+    protected final static Queue<String> cache = new ConcurrentLinkedQueue<String> ();
     protected static AtomicLong cacheHitsCounter = new AtomicLong( 0L );
 
     @Override
@@ -34,10 +34,9 @@ try {
 
         if ( request.getQueryString() != null && request.getQueryString().equals("cacheStats") )
         {
-            String msg = "" + requestsCounter.get() + ", " + cacheHitsCounter.get();
-            synchronized (cache) {
-                msg += ", " + cache.size();
-            }
+            String msg = "" + requestsCounter.get();
+            msg += ", " + cacheHitsCounter.get();
+            msg += ", " + cache.size();
 
 System.out.println( msg );
             try {
@@ -51,13 +50,7 @@ System.out.println( msg );
         {
             requestsCounter.incrementAndGet();
 
-            final boolean added;
-            synchronized (cache) {
-                added = cache.add( cacheKey );
-            }
-
-            if ( ! added )
-                cacheHitsCounter.incrementAndGet();
+            updateCacheStats( cacheKey );
 
             super.doGet( request, response );
         }
@@ -66,6 +59,21 @@ catch ( Exception ex ) {
 System.err.println( ex.getClass().getName() + ": " + ex.getMessage() );
 ex.printStackTrace();
 }
+    }
+
+    protected void updateCacheStats( final String cacheKey )
+    {
+        final boolean hit;
+        synchronized ( cache )
+        {
+            hit = cache.contains( cacheKey );
+
+            if ( ! hit )
+                cache.add( cacheKey );
+        }
+
+        if ( hit )
+            cacheHitsCounter.incrementAndGet();
     }
 
 }
