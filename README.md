@@ -1,4 +1,4 @@
-# Linked Data Fragments Server <img src="http://linkeddatafragments.org/images/logo.svg" width="100" align="right" alt="" />
+# brTPF-Enabled Linked Data Fragments Server <img src="http://linkeddatafragments.org/images/logo.svg" width="100" align="right" alt="" />
 On today's Web, Linked Data is published in different ways,
 which include [data dumps](http://downloads.dbpedia.org/3.9/en/),
 [subject pages](http://dbpedia.org/page/Linked_data),
@@ -10,7 +10,7 @@ is that they are either so powerful that their servers suffer from low availabil
 ([as is the case with SPARQL](http://sw.deri.org/~aidanh/docs/epmonitorISWC.pdf)),
 or either don't allow efficient querying.
 
-Instead, this server offers **[Triple Pattern Fragments](http://www.hydra-cg.com/spec/latest/triple-pattern-fragments/)**.
+Instead, this server offers **[Triple Pattern Fragments](http://www.hydra-cg.com/spec/latest/triple-pattern-fragments/)** (TPFs) as well as **[Bindings-Restricted Triple Pattern Fragments](http://arxiv.org/pdf/1608.08148)** (brTPFs).
 Each Triple Pattern Fragment offers:
 
 - **data** that corresponds to a _triple pattern_
