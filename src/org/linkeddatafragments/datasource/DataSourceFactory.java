@@ -33,19 +33,6 @@ public class DataSourceFactory {
                 } catch (IOException ex) {
                     throw new DataSourceException(ex);
                 }
-            case "BlazegraphDataSource":
-                final Properties props = new Properties();
-                Iterator<Map.Entry<String,JsonElement>> it = settings.entrySet().iterator();
-                while ( it.hasNext() ) {
-                    final Map.Entry<String,JsonElement> entry = it.next();
-                    props.setProperty( entry.getKey(), entry.getValue().getAsString() );
-                }
-
-                try {
-                    return new BlazegraphDataSource( title, description, props );
-                } catch ( Exception ex ) {
-                    throw new DataSourceException(ex);
-                }
             default:
                 throw new UnknownDataSourceTypeException(type);
 
