@@ -162,7 +162,7 @@ public class TriplePatternFragmentServlet extends HttpServlet
             if (dataSource == null)
             {
                 throw new Exception(
-                        "Data source not found (" + dataSourceName + ")." );
+                        "Data source not found (" + dataSourceName + ", contextPath: " + contextPath + ", requestURI: " + requestURI + ")." );
             }
 
             // query the fragment
