@@ -46,6 +46,19 @@ System.out.println( msg );
             catch ( Exception e ) {
             }
         }
+        else if ( request.getQueryString() != null && request.getQueryString().equals("clearCache") )
+        {
+            clearCache();
+            String msg = "cache cleared";
+
+System.out.println( msg );
+            try {
+                response.getWriter().write( msg );
+                response.getWriter().flush();
+            }
+            catch ( Exception e ) {
+            }
+        }
         else
         {
             requestsCounter.incrementAndGet();
@@ -74,6 +87,16 @@ ex.printStackTrace();
 
         if ( hit )
             cacheHitsCounter.incrementAndGet();
+    }
+
+    protected void clearCache()
+    {
+        synchronized ( cache )
+        {
+            cache.clear();
+            requestsCounter.set( 0L );
+            cacheHitsCounter.set( 0L );
+        }
     }
 
 }
