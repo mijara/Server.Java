@@ -1,6 +1,8 @@
 package org.linkeddatafragments.servlet;
 
+import java.util.HashSet;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -19,6 +21,7 @@ public class CacheStatsTPFServlet extends TriplePatternFragmentServlet
 {
     private static AtomicLong requestsCounter = new AtomicLong( 0L );
     protected final static Queue<String> cache = new ConcurrentLinkedQueue<String> ();
+    protected final static Set<String> cachedRequests = new HashSet<String> ();
     protected static AtomicLong cacheHitsCounter = new AtomicLong( 0L );
 
     @Override
@@ -79,10 +82,12 @@ ex.printStackTrace();
         final boolean hit;
         synchronized ( cache )
         {
-            hit = cache.contains( cacheKey );
+            hit = cachedRequests.contains( cacheKey );
 
-            if ( ! hit )
+            if ( ! hit ) {
                 cache.add( cacheKey );
+                cachedRequests.add( cacheKey );
+            }
         }
 
         if ( hit )
@@ -94,6 +99,7 @@ ex.printStackTrace();
         synchronized ( cache )
         {
             cache.clear();
+            cachedRequests.clear();
             requestsCounter.set( 0L );
             cacheHitsCounter.set( 0L );
         }

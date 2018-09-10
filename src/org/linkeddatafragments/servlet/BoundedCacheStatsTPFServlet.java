@@ -25,7 +25,7 @@ public class BoundedCacheStatsTPFServlet extends CacheStatsTPFServlet
         final boolean hit;
         synchronized (cache)
         {
-            hit = cache.contains( cacheKey );
+            hit = cachedRequests.contains( cacheKey );
 
             if ( hit ) {
                 cache.remove( cacheKey );
@@ -34,7 +34,10 @@ public class BoundedCacheStatsTPFServlet extends CacheStatsTPFServlet
                 cache.poll();
             }
 
-            cache.add( cacheKey );                
+            cache.add( cacheKey );
+            if ( ! hit ) {
+                cachedRequests.add( cacheKey );
+            }
         }
 
         if ( hit )
