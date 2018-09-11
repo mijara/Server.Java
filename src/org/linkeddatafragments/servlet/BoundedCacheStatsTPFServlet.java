@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * Servlet that responds with a Basic Linked Data Fragment.
  * 
- * @author Ruben Verborgh
+ * @author Olaf Hartig
  */
 public class BoundedCacheStatsTPFServlet extends CacheStatsTPFServlet
 {
@@ -31,7 +31,8 @@ public class BoundedCacheStatsTPFServlet extends CacheStatsTPFServlet
                 cache.remove( cacheKey );
             }
             else if ( cache.size() >= maxCacheSize ) {
-                cache.poll();
+                final String elmt = cache.poll();
+                cachedRequests.remove( elmt );
             }
 
             cache.add( cacheKey );
