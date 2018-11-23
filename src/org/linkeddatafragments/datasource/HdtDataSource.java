@@ -8,7 +8,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
+import org.linkeddatafragments.datasource.cache.Cache;
 import org.linkeddatafragments.util.TripleElement;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
 import org.rdfhdt.hdt.hdt.HDT;
@@ -63,6 +65,13 @@ public class HdtDataSource extends DataSource
             TripleElement _predicate, TripleElement _object, final long offset,
             final long limit)
     {
+        return getFragmentWithoutCache(_subject, _predicate, _object, offset, limit);
+    }
+
+    private TriplePatternFragment getFragmentWithCache(
+            TripleElement _subject, TripleElement _predicate, TripleElement _object, final long offset,
+            final long limit)
+    {
         Resource subject = null;
         if (!_subject.name.equals("Var"))
         {
@@ -91,13 +100,135 @@ public class HdtDataSource extends DataSource
         // look up the result from the HDT datasource
         final int subjectId = subject == null ? 0
                 : dictionary.getIntID(subject.asNode(),
-                        TripleComponentRole.SUBJECT);
+                TripleComponentRole.SUBJECT);
         final int predicateId = predicate == null ? 0
                 : dictionary.getIntID(predicate.asNode(),
-                        TripleComponentRole.PREDICATE);
+                TripleComponentRole.PREDICATE);
         final int objectId = object == null ? 0
                 : dictionary.getIntID(object.asNode(),
-                        TripleComponentRole.OBJECT);
+                TripleComponentRole.OBJECT);
+        if (subjectId < 0 || predicateId < 0 || objectId < 0)
+        {
+            return new TriplePatternFragmentBase();
+        }
+
+        final Model triples = ModelFactory.createDefaultModel();
+        TripleID tripleID = new TripleID(subjectId, predicateId, objectId);
+        IteratorTripleID matches;
+
+        Cache<String, IteratorCacheable> cache = Cache.getInstance(String.class, IteratorCacheable.class, 512);
+        IteratorCacheable cached = cache.find(tripleID.toString());
+
+        if (cached != null) {
+            // cached matches found.
+            matches = cached.iteratorTripleID;
+            matches.goToStart();
+        } else {
+            matches = datasource.getTriples().search(tripleID);
+        }
+
+        final boolean hasMatches = matches.hasNext();
+
+        if (hasMatches)
+        {
+            // try to jump directly to the offset
+            boolean atOffset;
+            if (matches.canGoTo())
+            {
+                try
+                {
+                    matches.goTo(offset);
+                    atOffset = true;
+                }
+                // if the offset is outside the bounds, this page has no matches
+                catch (IndexOutOfBoundsException exception)
+                {
+                    atOffset = false;
+                }
+            }
+            // if not possible, advance to the offset iteratively
+            else
+            {
+                matches.goToStart();
+                for (int i = 0; !(atOffset = i == offset)
+                        && matches.hasNext(); i++)
+                    matches.next();
+            }
+            // try to add `limit` triples to the result model
+            if (atOffset)
+            {
+                for (int i = 0; i < limit && matches.hasNext(); i++)
+                    triples.add(triples.asStatement(toTriple(matches.next())));
+
+                if (cached == null) {
+                    cache.insert(tripleID.toString(), new IteratorCacheable(matches), -1);
+                }
+            }
+        }
+
+        // estimates can be wrong; ensure 0 is returned if there are no results,
+        // and always more than actual results
+        final long estimatedTotal = triples.size() > 0
+                ? Math.max(offset + triples.size() + 1,
+                matches.estimatedNumResults())
+                : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
+
+        // create the fragment
+        return new TriplePatternFragment()
+        {
+            @Override
+            public Model getTriples()
+            {
+                return triples;
+            }
+
+            @Override
+            public long getTotalSize()
+            {
+                return estimatedTotal;
+            }
+        };
+    }
+
+    private TriplePatternFragment getFragmentWithoutCache(TripleElement _subject,
+                                             TripleElement _predicate, TripleElement _object, final long offset,
+                                             final long limit)
+    {
+        Resource subject = null;
+        if (!_subject.name.equals("Var"))
+        {
+            subject = (Resource) _subject.object;
+        }
+        Property predicate = null;
+        if (!_predicate.name.equals("Var"))
+        {
+            predicate = (Property) _predicate.object;
+        }
+        RDFNode object = null;
+        if (!_object.name.equals("Var"))
+        {
+            object = (RDFNode) _object.object;
+        }
+
+        if (offset < 0)
+        {
+            throw new IndexOutOfBoundsException("offset");
+        }
+        if (limit < 1)
+        {
+            throw new IllegalArgumentException("limit");
+        }
+
+        // look up the result from the HDT datasource
+        final int subjectId = subject == null ? 0
+                : dictionary.getIntID(subject.asNode(),
+                TripleComponentRole.SUBJECT);
+        final int predicateId = predicate == null ? 0
+                : dictionary.getIntID(predicate.asNode(),
+                TripleComponentRole.PREDICATE);
+        final int objectId = object == null ? 0
+                : dictionary.getIntID(object.asNode(),
+                TripleComponentRole.OBJECT);
         if (subjectId < 0 || predicateId < 0 || objectId < 0)
         {
             return new TriplePatternFragmentBase();
@@ -144,7 +275,7 @@ public class HdtDataSource extends DataSource
         // and always more than actual results
         final long estimatedTotal = triples.size() > 0
                 ? Math.max(offset + triples.size() + 1,
-                        matches.estimatedNumResults())
+                matches.estimatedNumResults())
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
 
         // create the fragment
@@ -789,6 +920,16 @@ public class HdtDataSource extends DataSource
             return new TripleID( curSubjID, curPredID, curObjID );
         }
 
+        @Override
+        public void remove() {
+
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super TripleID> action) {
+
+        }
+
         public void reset()
         {
             ready = canHaveMatches;
@@ -870,4 +1011,11 @@ public class HdtDataSource extends DataSource
 
     } // end of TripleIDCachingIterator
 
+    private class IteratorCacheable {
+        IteratorTripleID iteratorTripleID;
+
+        public IteratorCacheable(IteratorTripleID iteratorTripleID) {
+            this.iteratorTripleID = iteratorTripleID;
+        }
+    }
 }
