@@ -65,7 +65,7 @@ public class HdtDataSource extends DataSource
             TripleElement _predicate, TripleElement _object, final long offset,
             final long limit)
     {
-        return getFragmentWithoutCache(_subject, _predicate, _object, offset, limit);
+        return getFragmentWithCache(_subject, _predicate, _object, offset, limit);
     }
 
     private TriplePatternFragment getFragmentWithCache(
