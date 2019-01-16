@@ -11,6 +11,7 @@ import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
 import org.linkeddatafragments.datasource.cache.Cache;
+import org.linkeddatafragments.datasource.cache.LruCache;
 import org.linkeddatafragments.util.TripleElement;
 import org.rdfhdt.hdt.enums.TripleComponentRole;
 import org.rdfhdt.hdt.hdt.HDT;
@@ -31,7 +32,7 @@ import com.hp.hpl.jena.sparql.engine.binding.Binding;
 
 /**
  * An HDT data source of Basic Linked Data Fragments.
- * 
+ *
  * @author Ruben Verborgh
  */
 public class HdtDataSource extends DataSource
@@ -40,9 +41,11 @@ public class HdtDataSource extends DataSource
     private final HDT datasource;
     private final NodeDictionary dictionary;
 
+    private static final Cache<String, TriplePatternFragment> CACHE = new LruCache<>(8912);
+
     /**
      * Creates a new HdtDataSource.
-     * 
+     *
      * @param title
      *            title of the datasource
      * @param description
@@ -112,21 +115,15 @@ public class HdtDataSource extends DataSource
             return new TriplePatternFragmentBase();
         }
 
-        final Model triples = ModelFactory.createDefaultModel();
-        TripleID tripleID = new TripleID(subjectId, predicateId, objectId);
-        IteratorTripleID matches;
-
-        Cache<String, IteratorCacheable> cache = Cache.getInstance(String.class, IteratorCacheable.class, 512);
-        IteratorCacheable cached = cache.find(tripleID.toString());
-
-        if (cached != null) {
-            // cached matches found.
-            matches = cached.iteratorTripleID;
-            matches.goToStart();
-        } else {
-            matches = datasource.getTriples().search(tripleID);
+        String cacheId = subjectId + "." + predicateId + "." + objectId + "." + offset + "." + limit;
+        TriplePatternFragment fragment = CACHE.find(cacheId);
+        if (fragment != null) {
+            return fragment;
         }
 
+        final Model triples = ModelFactory.createDefaultModel();
+        TripleID tripleID = new TripleID(subjectId, predicateId, objectId);
+        IteratorTripleID matches = datasource.getTriples().search(tripleID);;
         final boolean hasMatches = matches.hasNext();
 
         if (hasMatches)
@@ -159,10 +156,6 @@ public class HdtDataSource extends DataSource
             {
                 for (int i = 0; i < limit && matches.hasNext(); i++)
                     triples.add(triples.asStatement(toTriple(matches.next())));
-
-                if (cached == null) {
-                    cache.insert(tripleID.toString(), new IteratorCacheable(matches), -1);
-                }
             }
         }
 
@@ -174,7 +167,7 @@ public class HdtDataSource extends DataSource
                 : hasMatches ? Math.max(matches.estimatedNumResults(), 1) : 0;
 
         // create the fragment
-        return new TriplePatternFragment()
+        fragment = new TriplePatternFragment()
         {
             @Override
             public Model getTriples()
@@ -188,6 +181,8 @@ public class HdtDataSource extends DataSource
                 return estimatedTotal;
             }
         };
+
+        return fragment;
     }
 
     private TriplePatternFragment getFragmentWithoutCache(TripleElement _subject,
@@ -297,7 +292,7 @@ public class HdtDataSource extends DataSource
 
     /**
      * Converts the HDT triple to a Jena Triple.
-     * 
+     *
      * @param tripleId
      *            the HDT triple
      * @return the Jena triple
@@ -1010,12 +1005,4 @@ public class HdtDataSource extends DataSource
         }
 
     } // end of TripleIDCachingIterator
-
-    private class IteratorCacheable {
-        IteratorTripleID iteratorTripleID;
-
-        public IteratorCacheable(IteratorTripleID iteratorTripleID) {
-            this.iteratorTripleID = iteratorTripleID;
-        }
-    }
 }

@@ -52,28 +52,4 @@ public class DoublyLinkedList<K, V> {
     public Node<K, V> getTail() {
         return tail;
     }
-
-    public void debugList() {
-        Node<K, V> node = head;
-
-        while (node != null) {
-            System.out.print(node.value);
-            System.out.print(" | ");
-            node = node.next;
-        }
-
-        System.out.println();
-    }
-
-    public static void main(String[] args) {
-        DoublyLinkedList<String, Integer> dll = new DoublyLinkedList<>();
-
-        for (int i = 0; i < 10000; i++) {
-            dll.prepend(new Node<>("myValue", 1, -1));
-
-            if (i % 100 == 0) {
-                dll.remove(dll.getTail());
-            }
-        }
-    }
 }
