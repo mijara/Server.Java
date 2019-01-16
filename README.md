@@ -27,6 +27,13 @@ Execute the following command to create a WAR and JAR file:
 ```
 $ mvn install
 ```
+
+Another option is to use Docker to compile, with the following command:
+
+```
+$ docker run -v $(pwd):/usr/src/program -w /usr/src/program maven:3.6.0-jdk-8 mvn package
+```
+
 ## Deploy stand alone
 The server can run with Jetty from a single jar as follows:
 
