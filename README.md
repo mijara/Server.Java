@@ -31,7 +31,7 @@ $ mvn install
 Another option is to use Docker to compile, with the following command:
 
 ```
-$ docker run -v $(pwd):/usr/src/program -w /usr/src/program maven:3.6.0-jdk-8 mvn package
+$ docker run -v $(pwd):/usr/src/program -w /usr/src/program maven:3.6.0-jdk-8 mvn install
 ```
 
 ## Deploy stand alone
