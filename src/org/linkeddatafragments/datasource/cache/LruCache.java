@@ -35,7 +35,9 @@ public class LruCache<K, V> implements Cache<K, V> {
         if (fastAccess.containsKey(key)) {
             // if the key is known, then reinsert it so that it jumps back to the top
             // of the list.
-            reinsertNode(key);
+            Node<K, V> node = reinsertNode(key);
+            node.value = value;
+
             return;
         }
 
